@@ -1,6 +1,7 @@
 package webhooks
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -9,9 +10,9 @@ import (
 
 //GitHubWebHookHandler handle GitHub WebHooks events.
 func GitHubWebHookHandler(w http.ResponseWriter, r *http.Request) {
-	hook, err := github.New(github.Options.Secret(""))
+	hook, err := github.New(github.Options.Secret("GH_OSECRET"))
 	if err != nil {
-		log.Printf("")
+		log.Println("Error connecting to GitHub")
 	}
 	payload, err := hook.Parse(r, github.PushEvent, github.PingEvent)
 	if err != nil {
@@ -21,7 +22,9 @@ func GitHubWebHookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	switch payload.(type) {
 	case github.PingPayload:
-		// TODO write back
+		w.Header().Set("Content-Type", "application/json")
+		res, _ := json.Marshal(map[string]string{"message": "OK"})
+		w.Write(res)
 		break
 	case github.PushPayload:
 		//TODO sent event to sqs
