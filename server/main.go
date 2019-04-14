@@ -3,29 +3,38 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/gorilla/mux"
-	"github.com/lokeon-university/kfr-ci/app/webhooks"
 )
 
 var sess = session.Must(session.NewSessionWithOptions(session.Options{
-	SharedConfigState: session.SharedConfigEnable,
+	Config: aws.Config{
+		Region:      aws.String("us-east-1"),
+		Credentials: credentials.NewStaticCredentials(os.Getenv("AWS_ID"), os.Getenv("AWS_SECRET"), ""),
+	},
 }))
 
 // Create DynamoDB client
-var svc = dynamodb.New(sess)
+var dynClient = dynamodb.New(sess)
+
+// Create SQS client
+var sqsClient = sqs.New(sess)
 
 func main() {
 	setupGitHubOAuth()
 	r := mux.NewRouter()
 	r.HandleFunc("/", HandleMain).Methods("GET")
-	r.HandleFunc("/webhooks", webhooks.GitHubWebHookHandler).Methods("POST")
+	r.HandleFunc("/webhooks", GitHubWebHookHandler).Methods("POST")
 	r.HandleFunc("/auth", GitHubOAuthHandler).Methods("GET")
 	srv := &http.Server{
-		Addr:         "0.0.0.0:5000",
+		Addr:         ":" + os.Getenv("PORT"),
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
 		IdleTimeout:  time.Second * 60,

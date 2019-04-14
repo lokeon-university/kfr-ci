@@ -54,11 +54,26 @@ func GitHubOAuthHandler(w http.ResponseWriter, r *http.Request) {
 		Item:      av,
 		TableName: aws.String("GHTOKENS"),
 	}
-	_, err = svc.PutItem(input)
+	_, err = dynClient.PutItem(input)
 	if err != nil {
 		log.Println("Error adding user to DB")
 	}
 	log.Println("Added user to DB")
+	// result, err := sqsClient.SendMessage(&sqs.SendMessageInput{
+	// 	DelaySeconds: aws.Int64(10),
+	// 	MessageAttributes: map[string]*sqs.MessageAttributeValue{
+	// 		"UserID": &sqs.MessageAttributeValue{
+	// 			DataType:    aws.String("String"),
+	// 			StringValue: aws.String(ids[1]),
+	// 		},
+	// 	},
+	// 	MessageBody: aws.String("Thanks for register to KFR CI"),
+	// 	QueueUrl:    &qURL,
+	// })
+	// if err != nil {
+	// 	log.Fatal("Error", err)
+	// }
+	// log.Println("Sended Message to Queue", *result.MessageId)
 	http.Redirect(w, r, "https://t.me/kfr_cibot", 302)
 }
 
