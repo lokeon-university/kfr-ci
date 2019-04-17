@@ -71,8 +71,8 @@ func (kfr *kfrBot) handleStart() {
 
 func main() {
 	bot := initBot()
-	bot.handleStart()
-	bot.handleRepos()
 	bot.hadleAuth()
+	bot.handleRepos()
+	bot.handleStart()
 	bot.start()
 }

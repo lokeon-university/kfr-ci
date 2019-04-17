@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -25,7 +26,7 @@ var qURLGitHub = "https://sqs.us-east-1.amazonaws.com/492996661514/github_webhoo
 
 //GitHubWebHookHandler handle GitHub WebHooks events.
 func GitHubWebHookHandler(w http.ResponseWriter, r *http.Request) {
-	hook, err := github.New(github.Options.Secret("GH_OSECRET"))
+	hook, err := github.New(github.Options.Secret(os.Getenv("GH_OSECRET")))
 	if err != nil {
 		log.Println("Error connecting to GitHub")
 	}
@@ -33,20 +34,17 @@ func GitHubWebHookHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == github.ErrEventNotFound {
 			log.Println("event wasn't one of the ones asked to be parsed")
+		} else {
+			log.Println(err)
 		}
 	}
 	switch payload.(type) {
 	case github.PingPayload:
-		responseWebHook(w, r)
 		break
 	case github.PushPayload:
 		sendMessageQueue(payload)
-		responseWebHook(w, r)
 		break
 	}
-}
-
-func responseWebHook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	res, _ := json.Marshal(map[string]string{"message": "OK"})
 	w.Write(res)
@@ -54,8 +52,10 @@ func responseWebHook(w http.ResponseWriter, r *http.Request) {
 
 func sendMessageQueue(payload interface{}) {
 	push := payload.(github.PushPayload)
+	if push.Repository.Language == nil {
+		push.Repository.Language = aws.String("None")
+	}
 	result, err := sqsClient.SendMessage(&sqs.SendMessageInput{
-		DelaySeconds: aws.Int64(10),
 		MessageAttributes: map[string]*sqs.MessageAttributeValue{
 			"repository": &sqs.MessageAttributeValue{
 				DataType:    aws.String("String"),
@@ -82,7 +82,9 @@ func sendMessageQueue(payload interface{}) {
 				StringValue: aws.String(push.HeadCommit.ID),
 			},
 		},
-		QueueUrl: &qURLGitHub,
+		MessageBody:    aws.String("GitHub Webhook " + push.HeadCommit.ID),
+		MessageGroupId: aws.String("WebHooks"),
+		QueueUrl:       &qURLGitHub,
 	})
 	if err != nil {
 		log.Fatal("Error", err)
