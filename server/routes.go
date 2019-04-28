@@ -27,9 +27,9 @@ func setupGitHubOAuth() {
 
 //User GitHub user data.
 type User struct {
-	Token  string `json:"token"`
-	ChatID string `json:"chat_id"`
-	UserID string `json:"user_id"`
+	Token  string `json:"token,omitempty"`
+	ChatID string `json:"chat_id,omitempty"`
+	UserID string `json:"user_id,omitempty"`
 }
 
 //GitHubOAuthHandler handle GitHub OAuth event.

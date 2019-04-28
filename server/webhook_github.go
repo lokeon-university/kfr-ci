@@ -14,12 +14,12 @@ import (
 )
 
 type pipeline struct {
-	RepositoryID int64
-	URL          string
-	Repository   string
-	Branch       string
-	LogFileName  string
-	Language     string
+	RepositoryID int64  `json:"repository_id,omitempty"`
+	URL          string `json:"url,omitempty"`
+	Repository   string `json:"repository,omitempty"`
+	Branch       string `json:"branch,omitempty"`
+	LogFileName  string `json:"log_file_name,omitempty"`
+	Language     string `json:"language,omitempty"`
 }
 
 var qURLGitHub = "https://sqs.us-east-1.amazonaws.com/492996661514/github_webhook.fifo"

@@ -28,16 +28,16 @@ var dynClient = dynamodb.New(sess)
 var tableName = "GHTOKENS"
 
 type repositories struct {
-	ID            string
-	Name          string
-	SSHURL        string
-	NameWithOwner string
+	ID            string `json:"id,omitempty"`
+	Name          string `json:"name,omitempty"`
+	SSHURL        string `json:"sshurl,omitempty"`
+	NameWithOwner string `json:"name_with_owner,omitempty"`
 }
 
 type userDB struct {
-	Token  string `json:"token"`
-	ChatID string `json:"chat_id"`
-	UserID string `json:"user_id"`
+	Token  string `json:"token,omitempty"`
+	ChatID string `json:"chat_id,omitempty"`
+	UserID string `json:"user_id,omitempty"`
 }
 
 type query struct {
