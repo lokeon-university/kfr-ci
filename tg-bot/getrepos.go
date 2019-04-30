@@ -52,7 +52,7 @@ func setWebhook(payload []string) error {
 		Config: map[string]interface{}{
 			"content_type": "json",
 			"url":          os.Getenv("GH_WH"),
-			"secret":       os.Getenv("GH_OCIDS"),
+			"secret":       os.Getenv("GH_OSECRET"),
 		},
 	}
 
