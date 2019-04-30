@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os"
-	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -31,7 +32,7 @@ var tableName = "GHTOKENS"
 type githubClient struct {
 	client *github.Client
 	ctx    context.Context
-	token string
+	token  string
 }
 
 func createClient(ctx context.Context, token string) *githubClient {
@@ -39,8 +40,30 @@ func createClient(ctx context.Context, token string) *githubClient {
 		&oauth2.Token{AccessToken: token},
 	)
 	tc := oauth2.NewClient(ctx, ts)
-	return &githubClient{github.NewClient(tc), ctx,token}
+	return &githubClient{github.NewClient(tc), ctx, token}
 
+}
+
+func setWebhook(payload []string) error {
+	ctx := context.Background()
+	gc := createClient(ctx, payload[0])
+	hook := github.Hook{
+		Active: github.Bool(true),
+		Events: []string{"push"},
+		Config: map[string]interface{}{
+			"content_type": "json",
+			"url":          fmt.Sprintf("https://%s.herokuapp.com/%s", os.Getenv("HEROKU_APP_NAME"), os.Getenv("KFR_TELEGRAM")),
+			"secret":       os.Getenv("GH_OCIDS"),
+			"name":			"kfr-ci",
+		},
+	}
+
+	_, _, err := gc.client.Repositories.CreateHook(ctx, payload[0], payload[0], &hook)
+	if err != nil {
+		log.Printf("Error %s occurred while creating webhook with params %v", err, payload)
+
+	}
+	return err
 }
 
 func (gc *githubClient) getRepos() [][]tb.InlineButton {
@@ -53,8 +76,8 @@ func (gc *githubClient) getRepos() [][]tb.InlineButton {
 		log.Println(*repo.Name, *repo.SSHURL)
 		replyKeys = append(replyKeys, []tb.InlineButton{{
 			Unique: "repos",
-			Text: *repo.Name,
-			Data:  fmt.Sprintf("%s %s",gc.token,*repo.SSHURL),
+			Text:   *repo.Name,
+			Data:   fmt.Sprintf("%s %s", gc.token, *repo.SSHURL),
 		},
 		})
 	}
@@ -115,9 +138,9 @@ func (kfr *kfrBot) handleHelp() {
 }
 
 func (kfr *kfrBot) handleRepoResponse() {
-	buttons	:= tb.InlineButton{Unique:"repos"}
-	kfr.bot.Handle(&buttons, func(c*tb.Callback){
-		data := strings.Split(c.Data," ")
+	buttons := tb.InlineButton{Unique: "repos"}
+	kfr.bot.Handle(&buttons, func(c *tb.Callback) {
+		data := strings.Split(c.Data, " ")
 		kfr.bot.Respond(c, &tb.CallbackResponse{})
 	})
 }
