@@ -103,3 +103,11 @@ func (kfr *kfrBot) handleRepos() {
 	})
 	log.Println("Handled Repos")
 }
+
+func (kfr *kfrBot) handleHelp() {
+	kfr.bot.Handle("/help", func(m *tb.Message) {
+		kfr.bot.Send(m.Sender, `/repos -> Devuelve una lista con los repositorios de una cuenta previamente registrada.
+		/auth -> Registra a un usuario mediante su cuenta de Github.`)
+	})
+	log.Println("Handled Help")
+}
