@@ -75,5 +75,6 @@ func main() {
 	bot.handleRepos()
 	bot.handleHelp()
 	bot.handleStart()
+	bot.handleRepoResponse()
 	bot.start()
 }

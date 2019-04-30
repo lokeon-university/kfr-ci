@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"fmt"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -30,6 +31,7 @@ var tableName = "GHTOKENS"
 type githubClient struct {
 	client *github.Client
 	ctx    context.Context
+	token string
 }
 
 func createClient(ctx context.Context, token string) *githubClient {
@@ -37,7 +39,7 @@ func createClient(ctx context.Context, token string) *githubClient {
 		&oauth2.Token{AccessToken: token},
 	)
 	tc := oauth2.NewClient(ctx, ts)
-	return &githubClient{github.NewClient(tc), ctx}
+	return &githubClient{github.NewClient(tc), ctx,token}
 
 }
 
@@ -50,9 +52,9 @@ func (gc *githubClient) getRepos() [][]tb.InlineButton {
 	for _, repo := range repos {
 		log.Println(*repo.Name, *repo.SSHURL)
 		replyKeys = append(replyKeys, []tb.InlineButton{{
+			Unique: "repos",
 			Text: *repo.Name,
-			URL:  *repo.SSHURL,
-			//TODO change URL for a Callback
+			Data:  fmt.Sprintf("%s %s",gc.token,*repo.SSHURL),
 		},
 		})
 	}
@@ -110,4 +112,12 @@ func (kfr *kfrBot) handleHelp() {
 		/auth -> Registra a un usuario mediante su cuenta de Github.`)
 	})
 	log.Println("Handled Help")
+}
+
+func (kfr *kfrBot) handleRepoResponse() {
+	buttons	:= tb.InlineButton{Unique:"repos"}
+	kfr.bot.Handle(&buttons, func(c*tb.Callback){
+		data := strings.Split(c.Data," ")
+		kfr.bot.Respond(c, &tb.CallbackResponse{})
+	})
 }
