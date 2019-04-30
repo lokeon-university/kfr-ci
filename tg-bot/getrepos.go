@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/shurcooL/githubv4"
+	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 	tb "gopkg.in/tucnak/telebot.v2"
 )
@@ -27,41 +27,42 @@ var sess = session.Must(session.NewSessionWithOptions(session.Options{
 var dynClient = dynamodb.New(sess)
 var tableName = "GHTOKENS"
 
-type repositories struct {
-	ID            string `json:"id,omitempty"`
-	Name          string `json:"name,omitempty"`
-	SSHURL        string `json:"sshurl,omitempty"`
-	NameWithOwner string `json:"name_with_owner,omitempty"`
+type githubClient struct {
+	client *github.Client
+	ctx    context.Context
+}
+
+func createClient(ctx context.Context, token string) *githubClient {
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	return &githubClient{github.NewClient(tc), ctx}
+
+}
+
+func (gc *githubClient) getRepos() [][]tb.InlineButton {
+	replyKeys := [][]tb.InlineButton{}
+	repos, _, err := gc.client.Repositories.List(gc.ctx, "", nil)
+	if err != nil {
+		log.Println(err)
+	}
+	for _, repo := range repos {
+		log.Println(*repo.Name, *repo.SSHURL)
+		replyKeys = append(replyKeys, []tb.InlineButton{{
+			Text: *repo.Name,
+			URL:  *repo.SSHURL,
+			//TODO change URL for a Callback
+		},
+		})
+	}
+	return replyKeys
 }
 
 type userDB struct {
 	Token  string `json:"token,omitempty"`
 	ChatID string `json:"chat_id,omitempty"`
 	UserID string `json:"user_id,omitempty"`
-}
-
-type query struct {
-	Viewer struct {
-		ID           string
-		Login        string
-		Repositories struct {
-			Nodes []repositories
-		} `graphql:"repositories(last: 20)"`
-	}
-}
-
-func runQuery(token string) (data query) {
-	src := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
-	)
-	httpClient := oauth2.NewClient(context.Background(), src)
-	client := githubv4.NewClient(httpClient)
-	data = query{}
-	err := client.Query(context.Background(), &data, nil)
-	if err != nil {
-		log.Println(err)
-	}
-	return
 }
 
 func getToken(user *tb.User) (string, error) {
@@ -88,28 +89,15 @@ func getToken(user *tb.User) (string, error) {
 	return item.Token, nil
 }
 
-func (q *query) getReposList() [][]tb.InlineButton {
-	replyKeys := [][]tb.InlineButton{}
-	for _, repo := range q.Viewer.Repositories.Nodes {
-		replyKeys = append(replyKeys, []tb.InlineButton{{
-			Text: repo.NameWithOwner,
-			URL:  repo.SSHURL,
-			//TODO change URL for a Callback
-		},
-		})
-	}
-	return replyKeys
-}
-
 func (kfr *kfrBot) handleRepos() {
 	kfr.bot.Handle("/repos", func(m *tb.Message) {
 		token, err := getToken(m.Sender)
 		if err != nil {
 			kfr.bot.Send(m.Sender, "First call /auth")
 		} else {
-			repos := runQuery(token)
+			gc := createClient(context.Background(), token)
 			kfr.bot.Send(m.Sender, "Repositories", &tb.ReplyMarkup{
-				InlineKeyboard: repos.getReposList(),
+				InlineKeyboard: gc.getRepos(),
 			})
 		}
 	})
