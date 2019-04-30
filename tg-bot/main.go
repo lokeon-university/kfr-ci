@@ -73,6 +73,7 @@ func main() {
 	bot := initBot()
 	bot.hadleAuth()
 	bot.handleRepos()
+	bot.handleHelp()
 	bot.handleStart()
 	bot.start()
 }
