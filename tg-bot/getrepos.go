@@ -2,12 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -52,9 +51,8 @@ func setWebhook(payload []string) error {
 		Events: []string{"push"},
 		Config: map[string]interface{}{
 			"content_type": "json",
-			"url":          fmt.Sprintf("https://%s.herokuapp.com/%s", os.Getenv("HEROKU_APP_NAME"), os.Getenv("KFR_TELEGRAM")),
+			"url":          os.Getenv("GH_WH"),
 			"secret":       os.Getenv("GH_OCIDS"),
-			"name":			"kfr-ci",
 		},
 	}
 
@@ -66,22 +64,27 @@ func setWebhook(payload []string) error {
 	return err
 }
 
-func (gc *githubClient) getRepos() [][]tb.InlineButton {
+func (gc *githubClient) getRepos() ([][]tb.InlineButton, error) {
 	replyKeys := [][]tb.InlineButton{}
 	repos, _, err := gc.client.Repositories.List(gc.ctx, "", nil)
 	if err != nil {
 		log.Println(err)
 	}
+	var payload []byte
 	for _, repo := range repos {
 		log.Println(*repo.Name, *repo.SSHURL)
+		payload, err = json.Marshal(map[string]string{"name": *repo.Name, "owner": *repo.Owner.Login, "token": gc.token})
+		if err != nil {
+			return nil, err
+		}
 		replyKeys = append(replyKeys, []tb.InlineButton{{
 			Unique: "repos",
 			Text:   *repo.Name,
-			Data:   fmt.Sprintf("%s %s", gc.token, *repo.SSHURL),
+			Data:   string(payload),
 		},
 		})
 	}
-	return replyKeys
+	return replyKeys, nil
 }
 
 type userDB struct {
@@ -121,9 +124,15 @@ func (kfr *kfrBot) handleRepos() {
 			kfr.bot.Send(m.Sender, "First call /auth")
 		} else {
 			gc := createClient(context.Background(), token)
-			kfr.bot.Send(m.Sender, "Repositories", &tb.ReplyMarkup{
-				InlineKeyboard: gc.getRepos(),
-			})
+			buttons, err := gc.getRepos()
+			if err == nil {
+				kfr.bot.Send(m.Sender, "Repositories", &tb.ReplyMarkup{
+					InlineKeyboard: buttons,
+				})
+			} else {
+				log.Println(err)
+				kfr.bot.Send(m.Sender, "Unable to read your repositories")
+			}
 		}
 	})
 	log.Println("Handled Repos")
@@ -140,7 +149,11 @@ func (kfr *kfrBot) handleHelp() {
 func (kfr *kfrBot) handleRepoResponse() {
 	buttons := tb.InlineButton{Unique: "repos"}
 	kfr.bot.Handle(&buttons, func(c *tb.Callback) {
-		data := strings.Split(c.Data, " ")
+		var payload map[string]string
+		err := json.Unmarshal([]byte(c.Data), &payload)
+		if err != nil {
+			log.Println(err)
+		}
 		kfr.bot.Respond(c, &tb.CallbackResponse{})
 	})
 }
