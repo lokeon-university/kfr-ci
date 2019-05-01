@@ -5,11 +5,10 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
+	"strconv"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"cloud.google.com/go/datastore"
+	"github.com/lokeon-university/kfr-ci/utils"
 	"golang.org/x/oauth2"
 	gh "golang.org/x/oauth2/github"
 )
@@ -25,55 +24,22 @@ func setupGitHubOAuth() {
 	}
 }
 
-//User GitHub user data.
-type User struct {
-	Token  string `json:"token,omitempty"`
-	ChatID string `json:"chat_id,omitempty"`
-	UserID string `json:"user_id,omitempty"`
-}
-
 //GitHubOAuthHandler handle GitHub OAuth event.
 func GitHubOAuthHandler(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Query()
-	log.Println(url.Get("code"), url.Get("state"))
 	token, err := ghOAuth.Exchange(oauth2.NoContext, url.Get("code"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	ids := strings.Split(url.Get("state"), " ")
-	user := User{
-		Token:  token.AccessToken,
-		ChatID: ids[0],
-		UserID: ids[1],
-	}
-	av, err := dynamodbattribute.MarshalMap(user)
+	id, _ := strconv.Atoi(url.Get("state"))
+	key := datastore.IncompleteKey("users", nil)
+	_, err = dbClient.Put(ctx, key, &utils.User{
+		ID:    id,
+		Token: token.AccessToken,
+	})
 	if err != nil {
-		log.Println("Error Marshalling User", err.Error())
+		log.Printf("Unable to add user into db")
 	}
-	input := &dynamodb.PutItemInput{
-		Item:      av,
-		TableName: aws.String("GHTOKENS"),
-	}
-	_, err = dynClient.PutItem(input)
-	if err != nil {
-		log.Println("Error adding user to DB")
-	}
-	log.Println("Added user to DB")
-	// result, err := sqsClient.SendMessage(&sqs.SendMessageInput{
-	// 	DelaySeconds: aws.Int64(10),
-	// 	MessageAttributes: map[string]*sqs.MessageAttributeValue{
-	// 		"UserID": &sqs.MessageAttributeValue{
-	// 			DataType:    aws.String("String"),
-	// 			StringValue: aws.String(ids[1]),
-	// 		},
-	// 	},
-	// 	MessageBody: aws.String("Thanks for register to KFR CI"),
-	// 	QueueUrl:    &qURL,
-	// })
-	// if err != nil {
-	// 	log.Fatal("Error", err)
-	// }
-	// log.Println("Sended Message to Queue", *result.MessageId)
 	http.Redirect(w, r, "https://t.me/kfr_cibot", 302)
 }
 
