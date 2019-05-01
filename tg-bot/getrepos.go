@@ -71,7 +71,6 @@ func (gc *githubClient) getRepos() ([][]tb.InlineButton, error) {
 	}
 	var payload []byte
 	for _, repo := range repos {
-		log.Println(*repo.Name, *repo.SSHURL)
 		payload, err = json.Marshal(map[string]string{
 			"name":  *repo.Name,
 			"owner": *repo.Owner.Login,
@@ -80,6 +79,7 @@ func (gc *githubClient) getRepos() ([][]tb.InlineButton, error) {
 		if err != nil {
 			return nil, err
 		}
+		log.Println(string(payload))
 		replyKeys = append(replyKeys, []tb.InlineButton{{
 			Unique: "repos",
 			Text:   *repo.Name,
