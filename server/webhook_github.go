@@ -5,11 +5,10 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"cloud.google.com/go/pubsub"
+	"github.com/lokeon-university/kfr-ci/utils"
 	"gopkg.in/go-playground/webhooks.v5/github"
 )
 
@@ -21,8 +20,6 @@ type pipeline struct {
 	LogFileName  string `json:"log_file_name,omitempty"`
 	Language     string `json:"language,omitempty"`
 }
-
-var qURLGitHub = "https://sqs.us-east-1.amazonaws.com/492996661514/github_webhook.fifo"
 
 //GitHubWebHookHandler handle GitHub WebHooks events.
 func GitHubWebHookHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,41 +50,22 @@ func GitHubWebHookHandler(w http.ResponseWriter, r *http.Request) {
 func sendMessageQueue(payload interface{}) {
 	push := payload.(github.PushPayload)
 	if push.Repository.Language == nil {
-		push.Repository.Language = aws.String("None")
+		push.Repository.Language = utils.String("None")
 	}
-	result, err := sqsClient.SendMessage(&sqs.SendMessageInput{
-		MessageAttributes: map[string]*sqs.MessageAttributeValue{
-			"repository": &sqs.MessageAttributeValue{
-				DataType:    aws.String("String"),
-				StringValue: aws.String(push.Repository.Name),
-			},
-			"repository_id": &sqs.MessageAttributeValue{
-				DataType:    aws.String("String"),
-				StringValue: aws.String(strconv.FormatInt(push.Repository.ID, 10)),
-			},
-			"branch": &sqs.MessageAttributeValue{
-				DataType:    aws.String("String"),
-				StringValue: aws.String(strings.Split(push.Ref, "/")[2]),
-			},
-			"language": &sqs.MessageAttributeValue{
-				DataType:    aws.String("String"),
-				StringValue: push.Repository.Language,
-			},
-			"url": &sqs.MessageAttributeValue{
-				DataType:    aws.String("String"),
-				StringValue: aws.String(push.Repository.SSHURL),
-			},
-			"log": &sqs.MessageAttributeValue{
-				DataType:    aws.String("String"),
-				StringValue: aws.String(push.HeadCommit.ID),
-			},
-		},
-		MessageBody:    aws.String("GitHub Webhook " + push.HeadCommit.ID),
-		MessageGroupId: aws.String("WebHooks"),
-		QueueUrl:       &qURLGitHub,
+	t := queueClient.Topic("webhooks")
+	data, _ := json.Marshal(pipeline{
+		RepositoryID: push.Repository.ID,
+		URL:          push.Repository.SSHURL,
+		Branch:       strings.Split(push.Ref, "/")[2],
+		LogFileName:  push.HeadCommit.ID,
+		Language:     *push.Repository.Language,
 	})
+	result := t.Publish(ctx, &pubsub.Message{
+		Data: data,
+	})
+	id, err := result.Get(ctx)
 	if err != nil {
-		log.Fatal("Error", err)
+		log.Print(err)
 	}
-	log.Println("Sended Message to Queue", *result.MessageId)
+	log.Printf("Published a message; msg ID: %v\n", id)
 }

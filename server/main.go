@@ -1,33 +1,35 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"cloud.google.com/go/datastore"
+	"cloud.google.com/go/pubsub"
 	"github.com/gorilla/mux"
 )
 
-var sess = session.Must(session.NewSessionWithOptions(session.Options{
-	Config: aws.Config{
-		Region:      aws.String("us-east-1"),
-		Credentials: credentials.NewStaticCredentials(os.Getenv("AWS_ID"), os.Getenv("AWS_SECRET"), ""),
-	},
-}))
+var dbClient *datastore.Client
+var queueClient *pubsub.Client
+var ctx = context.Background()
 
-// Create DynamoDB client
-var dynClient = dynamodb.New(sess)
-
-// Create SQS client
-var sqsClient = sqs.New(sess)
+func setupQueueDataBase() {
+	var err error
+	dbClient, err = datastore.NewClient(ctx, "")
+	if err != nil {
+		log.Fatal("Unable to get client for database")
+	}
+	queueClient, err = pubsub.NewClient(ctx, "")
+	if err != nil {
+		log.Fatal("Unable to get client for queue")
+	}
+}
 
 func main() {
+	setupQueueDataBase()
 	setupGitHubOAuth()
 	r := mux.NewRouter()
 	r.HandleFunc("/", HandleMain).Methods("GET")

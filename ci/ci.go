@@ -1,4 +1,4 @@
-package ci
+package main
 
 import (
 	"fmt"
@@ -24,10 +24,10 @@ var (
 	LogDIR = filepath.Join(ciDIR, "logs")
 	//availableImages list of available of supported languages
 	availableImages = map[string]string{
-		"go":         "docker/go",
-		"javascript": "docker/node",
-		"c++":        "docker/c++",
-		"python":     "docker/python",
+		"go":     "dockerfiles/go",
+		"java":   "dockerfiles/node",
+		"c++":    "dockerfiles/c++",
+		"python": "dockerfiles/python",
 	}
 )
 

@@ -7,6 +7,11 @@ import (
 	"golang.org/x/oauth2"
 )
 
+//String return address of string
+func String(str string) *string {
+	return &str
+}
+
 // User struct data
 type User struct {
 	ID    int
