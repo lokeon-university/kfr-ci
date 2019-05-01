@@ -18,3 +18,7 @@ func generateOAuthURL(m *tb.Message) string {
 	baseURL.RawQuery = params.Encode()
 	return baseURL.String()
 }
+
+func (b *bot) getUserToken(u *tb.User) {
+
+}

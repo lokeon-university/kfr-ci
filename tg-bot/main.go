@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
+	"cloud.google.com/go/datastore"
 	tb "gopkg.in/tucnak/telebot.v2"
 )
 
 type bot struct {
 	bot *tb.Bot
+	ctx context.Context
+	db *datastore.Client
 }
 
 func newBot() (*bot, error) {
@@ -24,26 +28,29 @@ func newBot() (*bot, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &bot{b}, nil
+	client, err := datastore.NewClient(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	return &bot{b, context.Background(),client}, nil
 }
 
 func (b *bot) start() {
 	b.bot.Start()
 }
 
-func (b *bot) newHandler(endpoint interface{}, handler func(m *tb.Message)) {
+func (b *bot) newHandler(endpoint interface{}, handler interface{}) {
 	b.bot.Handle(endpoint, handler)
 }
 
 func main() {
 	b, err := newBot()
 	if err != nil {
-		log.Fatal("")
+		log.Fatalf("Failed to create client: %v", err)
 	}
 	b.newHandler("/start", b.handleStart)
 	b.newHandler("/auth", b.handleOAuth)
 	b.newHandler("/help", b.handleHelp)
-	bot.handleRepos()
-	bot.handleRepoResponse()
+	b.newHandler("/repo", b.handleRepositories)
 	b.start()
 }
