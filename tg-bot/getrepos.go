@@ -40,12 +40,11 @@ func createClient(ctx context.Context, token string) *githubClient {
 	)
 	tc := oauth2.NewClient(ctx, ts)
 	return &githubClient{github.NewClient(tc), ctx, token}
-
 }
 
-func setWebhook(payload []string) error {
+func setWebhook(payload map[string]string) error {
 	ctx := context.Background()
-	gc := createClient(ctx, payload[0])
+	gc := createClient(ctx, payload["token"])
 	hook := github.Hook{
 		Active: github.Bool(true),
 		Events: []string{"push"},
@@ -56,7 +55,7 @@ func setWebhook(payload []string) error {
 		},
 	}
 
-	_, _, err := gc.client.Repositories.CreateHook(ctx, payload[0], payload[0], &hook)
+	_, _, err := gc.client.Repositories.CreateHook(ctx, payload["owner"], payload["name"], &hook)
 	if err != nil {
 		log.Printf("Error %s occurred while creating webhook with params %v", err, payload)
 
@@ -73,7 +72,11 @@ func (gc *githubClient) getRepos() ([][]tb.InlineButton, error) {
 	var payload []byte
 	for _, repo := range repos {
 		log.Println(*repo.Name, *repo.SSHURL)
-		payload, err = json.Marshal(map[string]string{"name": *repo.Name, "owner": *repo.Owner.Login, "token": gc.token})
+		payload, err = json.Marshal(map[string]string{
+			"name":  *repo.Name,
+			"owner": *repo.Owner.Login,
+			"token": gc.token,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -140,8 +143,9 @@ func (kfr *kfrBot) handleRepos() {
 
 func (kfr *kfrBot) handleHelp() {
 	kfr.bot.Handle("/help", func(m *tb.Message) {
-		kfr.bot.Send(m.Sender, `/repos -> Devuelve una lista con los repositorios de una cuenta previamente registrada.
-		/auth -> Registra a un usuario mediante su cuenta de Github.`)
+		help := `/repos -> Devuelve una lista con los repositorios de una cuenta previamente registrada.
+		/auth -> Registra a un usuario mediante su cuenta de Github.`
+		kfr.bot.Send(m.Sender, help)
 	})
 	log.Println("Handled Help")
 }
