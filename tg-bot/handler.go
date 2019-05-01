@@ -1,12 +1,22 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"log"
+	"os"
 
+	"github.com/google/go-github/github"
+	"github.com/lokeon-university/kfr-ci/utils"
 	tb "gopkg.in/tucnak/telebot.v2"
 )
+
+var githubWebhook = github.Hook{
+	Active: github.Bool(true),
+	Events: []string{"push"},
+	Config: map[string]interface{}{
+		"content_type": "json",
+		"url":          os.Getenv("GH_WH"),
+		"secret":       os.Getenv("GH_OSECRET"),
+	}}
 
 func (b *bot) handleOAuth(m *tb.Message) {
 	b.bot.Send(m.Sender, "GitHub", &tb.ReplyMarkup{
@@ -28,31 +38,25 @@ func (b *bot) handleHelp(m *tb.Message) {
 }
 
 func (b *bot) handleRepositories(m *tb.Message) {
-	token, err := getToken(m.Sender)
+	token, err := b.getUserToken(m.Sender)
 	if err != nil {
-		b.bot.Send(m.Sender, "First call /auth")
-	} else {
-		gc := createClient(context.Background(), token)
-		buttons, err := gc.getRepos()
-		if err == nil {
-			b.bot.Send(m.Sender, "Repositories", &tb.ReplyMarkup{
-				InlineKeyboard: buttons,
-			})
-		} else {
-			log.Println(err)
-			b.bot.Send(m.Sender, "Unable to read your repositories")
-		}
+		b.bot.Send(m.Sender, "Please call /help")
+		return
 	}
+	inlineKeys := b.getRespositoriesBttns(m.Sender, token)
+	b.bot.Send(m.Sender, "Choose Repositorie:", &tb.ReplyMarkup{
+		InlineKeyboard: inlineKeys,
+	})
 }
 
 func (b *bot) handleRepositoriesResponse(c *tb.Callback) {
-	buttons := tb.InlineButton{Unique: "repos"}
-	b.bot.Handle(&buttons, func(c *tb.Callback) {
-		var payload map[string]string
-		er := json.Unmarshal([]byte(c.Data), &payload)
-		if err != nil {
-			log.Println(err)
-		}
+	var data callBackData
+	_ = json.Unmarshal([]byte(c.Data), &data)
+	gc := utils.NewGitHubClient(b.ctx, data.Token)
+	err := gc.SetWebhook(data.Name, data.Owner, &githubWebhook)
+	if err != nil {
 		b.bot.Respond(c, &tb.CallbackResponse{})
-	})
+		return
+	}
+	b.bot.Respond(c, &tb.CallbackResponse{})
 }

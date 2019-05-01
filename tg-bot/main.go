@@ -12,7 +12,7 @@ import (
 type bot struct {
 	bot *tb.Bot
 	ctx context.Context
-	db *datastore.Client
+	db  *datastore.Client
 }
 
 func newBot() (*bot, error) {
@@ -28,11 +28,12 @@ func newBot() (*bot, error) {
 	if err != nil {
 		return nil, err
 	}
-	client, err := datastore.NewClient(ctx, "")
+	ctx := context.Background()
+	client, err := datastore.NewClient(ctx, "kfr-ci")
 	if err != nil {
 		return nil, err
 	}
-	return &bot{b, context.Background(),client}, nil
+	return &bot{b, ctx, client}, nil
 }
 
 func (b *bot) start() {
