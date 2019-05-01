@@ -1,0 +1,11 @@
+{
+    "branch": "master",
+    "language": "c++,go,java,python",
+    "build": [
+        "go version",
+        "go env"
+    ],
+    "env": [
+        "token=aaaaaaa"
+    ]
+}

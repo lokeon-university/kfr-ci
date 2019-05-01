@@ -7,13 +7,9 @@ echo "<h3>Starting the build</h3>"
 
 echo "<h3>Adding SSH keys</h3>"
 mkdir -p /root/.ssh/ && cp -R .ssh/* "$_"
-chmod 600 /root/.ssh/* &&\
+chmod 600 /root/.ssh/* && \
     ssh-keyscan github.com > /root/.ssh/known_hosts 
-echo
-
-echo "<h3>Checkout source code</h3>"
-git clone $PROJECT_REPOSITORY_URL $PROJECT_REPOSITORY_NAME 
-cd $PROJECT_REPOSITORY_NAME
+echo ""
 
 echo "<h3>Checkout source code<h/3>"
 git clone $REPO_URL $REPO_NAME
@@ -30,7 +26,7 @@ if [ -r ./kfr.yml ]; then
     KFR_CONFIG_PRESENT = true
 fi
 
-echo"<h3>Dependencies</h3>"
+echo "<h3>Dependencies</h3>"
 
 go get -v ./...
 

@@ -11,10 +11,6 @@ chmod 600 /root/.ssh/* &&\
     ssh-keyscan github.com > /root/.ssh/known_hosts &&\
 echo
 
-echo "<h3>Checkout source code</h3>"
-git clone $PROJECT_REPOSITORY_URL $PROJECT_REPOSITORY_NAME 
-cd $PROJECT_REPOSITORY_NAME
-
 echo "<h3>Checkout source code<h/3>"
 git clone $REPO_URL $REPO_NAME
 cd $REPO_NAME
