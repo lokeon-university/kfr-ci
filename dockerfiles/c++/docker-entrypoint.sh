@@ -5,14 +5,14 @@ echo "<h3>Starting the build</h3>"
 
 #echo "<h3>Adding SSH keys</h3>"
 #mkdir -p /root/.ssh/ && cp -R .ssh/* "$_"
-#chmod 600 /root/.ssh/* && ssh-keyscan github.com > /root/.ssh/known_hosts 
+#chmod 600 /root/.ssh/* && ssh-keyscan github.com > /root/.ssh/known_hosts
 echo
 
 echo "<h3>Checkout source code<h/3>"
 git clone $REPO_URL $REPO_NAME
 cd $REPO_NAME
 git checkout $REPO_BRANCH
-echo ""
+echo
 
 # comprobamos si existe kfr-ci.json
 KFR_CONFIG_PRESENT=false
@@ -24,14 +24,14 @@ fi
 
 echo "<h3>Dependencies</h3>"
 
-if $KFR_CONFIG_PRESENT ; then
+if $KFR_CONFIG_PRESENT; then
     source <(cat .kfr-ci.json | jq -r '. | .env[]')
 fi
 
 echo "<h3>Build</h3>"
 
-if  $KFR_CONFIG_PRESENT ; then
-    cat .kfr-ci.json | jq -r '. | .build[]' | bash 
+if $KFR_CONFIG_PRESENT; then
+    cat .kfr-ci.json | jq -r '. | .build[]' | bash
 fi
 
 exec "$@"
