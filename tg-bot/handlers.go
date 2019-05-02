@@ -1,8 +1,9 @@
 package main
 
 import (
-	"encoding/json"
+	"net/http"
 	"os"
+	"strings"
 
 	"github.com/google/go-github/github"
 	"github.com/lokeon-university/kfr-ci/utils"
@@ -14,8 +15,8 @@ var githubWebhook = github.Hook{
 	Events: []string{"push"},
 	Config: map[string]interface{}{
 		"content_type": "json",
-		"url":          os.Getenv("GH_WH"),
-		"secret":       os.Getenv("GH_OSECRET"),
+		"url":          os.Getenv("GH_WEBHOOK"),
+		"secret":       os.Getenv("GH_APPSECRET"),
 	}}
 
 func (b *bot) handleOAuth(m *tb.Message) {
@@ -38,8 +39,8 @@ func (b *bot) handleHelp(m *tb.Message) {
 }
 
 func (b *bot) handleRepositories(m *tb.Message) {
-	token, err := b.getUserToken(m.Sender)
-	if err != nil {
+	token := b.getUserToken(m.Sender)
+	if token == "" {
 		b.bot.Send(m.Sender, "Please call /help")
 		return
 	}
@@ -50,13 +51,30 @@ func (b *bot) handleRepositories(m *tb.Message) {
 }
 
 func (b *bot) handleRepositoriesResponse(c *tb.Callback) {
-	var data callBackData
-	_ = json.Unmarshal([]byte(c.Data), &data)
-	gc := utils.NewGitHubClient(b.ctx, data.Token)
-	err := gc.SetWebhook(data.Name, data.Owner, &githubWebhook)
+	data := strings.Split(c.Data, " ")
+	gc := utils.NewGitHubClient(b.ctx, b.getUserToken(c.Sender))
+	status, err := gc.SetWebhook(data[1], data[0], &githubWebhook)
 	if err != nil {
-		b.bot.Respond(c, &tb.CallbackResponse{})
+		var msg string
+		switch status {
+		case http.StatusNotFound:
+			msg = "The repositorie was not Found"
+			break
+		case http.StatusUnprocessableEntity:
+			msg = "The repositorie was already registered"
+			break
+		default:
+			msg = "Unable to set WebHook"
+			break
+		}
+		b.bot.Respond(c, &tb.CallbackResponse{
+			Text:      msg,
+			ShowAlert: true,
+		})
 		return
 	}
-	b.bot.Respond(c, &tb.CallbackResponse{})
+	b.bot.Respond(c, &tb.CallbackResponse{
+		ShowAlert: true,
+		Text:      "WebHook created sucessfully",
+	})
 }

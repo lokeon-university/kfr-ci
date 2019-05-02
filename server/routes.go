@@ -7,8 +7,6 @@ import (
 	"os"
 	"strconv"
 
-	"cloud.google.com/go/datastore"
-	"github.com/lokeon-university/kfr-ci/utils"
 	"golang.org/x/oauth2"
 	gh "golang.org/x/oauth2/github"
 )
@@ -17,8 +15,8 @@ var ghOAuth *oauth2.Config
 
 func setupGitHubOAuth() {
 	ghOAuth = &oauth2.Config{
-		ClientID:     os.Getenv("GH_OCID"),
-		ClientSecret: os.Getenv("GH_OCIDS"),
+		ClientID:     os.Getenv("GH_APPID"),
+		ClientSecret: os.Getenv("GH_APPSECRET"),
 		Endpoint:     gh.Endpoint,
 		Scopes:       []string{"repo", "admin:repo_hook", "read:org"},
 	}
@@ -32,13 +30,12 @@ func GitHubOAuthHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	id, _ := strconv.Atoi(url.Get("state"))
-	key := datastore.IncompleteKey("users", nil)
-	_, err = dbClient.Put(ctx, key, &utils.User{
-		ID:    id,
-		Token: token.AccessToken,
+	_, _, err = dbClient.Collection("users").Add(ctx, map[string]interface{}{
+		"ID":    id,
+		"Token": token.AccessToken,
 	})
 	if err != nil {
-		log.Printf("Unable to add user into db")
+		log.Fatalf("Failed adding user: %v", err)
 	}
 	http.Redirect(w, r, "https://t.me/kfr_cibot", 302)
 }

@@ -23,7 +23,7 @@ type pipeline struct {
 
 //GitHubWebHookHandler handle GitHub WebHooks events.
 func GitHubWebHookHandler(w http.ResponseWriter, r *http.Request) {
-	hook, err := github.New(github.Options.Secret(os.Getenv("GH_OSECRET")))
+	hook, err := github.New(github.Options.Secret(os.Getenv("GH_APPSECRET")))
 	if err != nil {
 		log.Println("Error connecting to GitHub")
 	}

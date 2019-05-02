@@ -1,52 +1,41 @@
 #!/bin/bash
 trap 'exit' ERR
 
-source /etc/profile
-
 echo "<h3>Starting the build</h3>"
-
-echo "<h3>Adding SSH keys</h3>"
-mkdir -p /root/.ssh/ && cp -R .ssh/* "$_"
-chmod 600 /root/.ssh/* &&\
-    ssh-keyscan github.com > /root/.ssh/known_hosts &&\
-echo
 
 echo "<h3>Checkout source code<h/3>"
 git clone $REPO_URL $REPO_NAME
 cd $REPO_NAME
 git checkout $REPO_BRANCH
-cd .
 echo
 
-# comprobamos si existe kfr.yml
-KFR_CONFIG_PRESENT = false
-KFR_CONFIG_FILE = ./kfr.yml
+# comprobamos si existe kfr.json
+KFR_CONFIG_PRESENT=false
+KFR_CONFIG_FILE=./kfr.json
 
-REQ_PRESENT = true
-REQ_FILE = ./requirements.txt
+REQ_PRESENT=true
+REQ_FILE=./requirements.txt
 
-if [ -r ./kfr.yml ]; then
-    KFR_CONFIG_PRESENT = true
+if [ -r ./kfr.json ]; then
+    echo "Found .kfr.json file." 1>&2
+    KFR_CONFIG_PRESENT=true
 fi
 
-echo"<h3>Dependencies</h3>"
+echo "<h3>Dependencies</h3>"
 
 if ! [ -r ./requirements.txt]; then
-    echo "ERROR. FALTA 'requirements.txt' " 1>&2
+    echo "ERROR. FALTA requirements.txt" 1>&2
     exit 1
 fi
 
-if $KFR_CONFIG_PRESENT && $REQ_PRESENT; then
-    source <(cat $KFR_CONFIG_FILE | jq --raw-output '. | .dependencies.custom[]?')
+if ($KFR_CONFIG_PRESENT && $REQ_PRESENT); then
+    pip3 install -r requirements.txt
 fi
 
-echo "<h3>Setup</h3>"
-if ! ($KFR_CONFIG_PRESENT && $REQ_PRESENT && $(cat $KFR_CONFIG_FILE | jq --raw-output '. | .setup.override//false')); then
-    pip install -r requirements.txt
-fi
+echo "<h3>Build</h3>"
 
-if $KFR_CONFIG_PRESENT && $REQ_PRESENT; then
-    source <(cat $KFR_CONFIG_FILE | jq --raw-output '. | .setup.custom[]?')
+if $KFR_CONFIG_PRESENT; then
+    cat .kfr-ci.json | jq -r '. | .build[]' | bash
 fi
 
 exec "$@"

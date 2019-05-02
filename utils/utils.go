@@ -34,9 +34,9 @@ func NewGitHubClient(ctx context.Context, token string) *GitHubClient {
 }
 
 // SetWebhook create hook on given repo
-func (gc *GitHubClient) SetWebhook(name, owner string, hook *github.Hook) (err error) {
-	_, _, err = gc.client.Repositories.CreateHook(gc.ctx, owner, name, hook)
-	return
+func (gc *GitHubClient) SetWebhook(name, owner string, hook *github.Hook) (int, error) {
+	_, res, err := gc.client.Repositories.CreateHook(gc.ctx, owner, name, hook)
+	return res.StatusCode, err
 }
 
 // GetRespositories of user

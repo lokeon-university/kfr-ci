@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
+	"log"
 	"os"
 	"strconv"
 
-	"cloud.google.com/go/datastore"
+	"cloud.google.com/go/firestore"
+	firebase "firebase.google.com/go"
 	"github.com/lokeon-university/kfr-ci/utils"
 	"google.golang.org/api/iterator"
 	tb "gopkg.in/tucnak/telebot.v2"
@@ -15,7 +17,7 @@ import (
 type bot struct {
 	bot *tb.Bot
 	ctx context.Context
-	db  *datastore.Client
+	db  *firestore.Client
 }
 
 func newBot() (*bot, error) {
@@ -32,10 +34,13 @@ func newBot() (*bot, error) {
 		return nil, err
 	}
 	ctx := context.Background()
-	client, err := datastore.NewClient(ctx, "kfr-ci")
+	conf := &firebase.Config{ProjectID: "kfr-ci"}
+	app, err := firebase.NewApp(ctx, conf)
 	if err != nil {
-		return nil, err
+		log.Fatalln(err)
 	}
+
+	client, err := app.Firestore(ctx)
 	return &bot{b, ctx, client}, nil
 }
 
@@ -53,20 +58,20 @@ type callBackData struct {
 	Token string `json:"token,omitempty"`
 }
 
-func (b *bot) getUserToken(u *tb.User) (string, error) {
-	q := datastore.NewQuery("users").Filter("ID =", u.ID)
-	it := b.db.Run(b.ctx, q)
+func (b *bot) getUserToken(u *tb.User) string {
+	iter := b.db.Collection("users").Where("ID", "==", u.ID).Documents(b.ctx)
 	var user utils.User
 	for {
-		_, err := it.Next(&user)
+		doc, err := iter.Next()
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			return "", err
+			log.Fatalf("Failed to iterate: %v", err)
 		}
+		doc.DataTo(&user)
 	}
-	return user.Token, nil
+	return user.Token
 }
 
 func (b *bot) getRespositoriesBttns(u *tb.User, token string) [][]tb.InlineButton {
@@ -78,11 +83,10 @@ func (b *bot) getRespositoriesBttns(u *tb.User, token string) [][]tb.InlineButto
 		return inlineKeys
 	}
 	for _, repo := range repos {
-		data, _ := json.Marshal(callBackData{*repo.Owner.Name, *repo.Name, token})
 		inlineBtn := tb.InlineButton{
 			Unique: strconv.FormatInt(*repo.ID, 10),
 			Text:   *repo.FullName,
-			Data:   string(data),
+			Data:   fmt.Sprintf("%s %s", *repo.Owner.Login, *repo.Name),
 		}
 		inlineKeys = append(inlineKeys, []tb.InlineButton{inlineBtn})
 		b.bot.Handle(&inlineBtn, b.handleRepositoriesResponse)

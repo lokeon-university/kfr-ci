@@ -1,1 +1,4 @@
 .env
+.ckfr-ci.json
+.inlinenv
+.env-dev

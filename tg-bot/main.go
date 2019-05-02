@@ -12,6 +12,6 @@ func main() {
 	b.newHandler("/start", b.handleStart)
 	b.newHandler("/auth", b.handleOAuth)
 	b.newHandler("/help", b.handleHelp)
-	b.newHandler("/repo", b.handleRepositories)
+	b.newHandler("/repos", b.handleRepositories)
 	b.start()
 }

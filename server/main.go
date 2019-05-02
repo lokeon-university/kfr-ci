@@ -7,21 +7,29 @@ import (
 	"os"
 	"time"
 
-	"cloud.google.com/go/datastore"
+	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/pubsub"
+	firebase "firebase.google.com/go"
 	"github.com/gorilla/mux"
 )
 
-var dbClient *datastore.Client
+var dbClient *firestore.Client
 var queueClient *pubsub.Client
 var ctx = context.Background()
 
 func setupQueueDataBase() {
 	var err error
-	dbClient, err = datastore.NewClient(ctx, "")
+	conf := &firebase.Config{ProjectID: "kfr-ci"}
+	app, err := firebase.NewApp(ctx, conf)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	dbClient, err = app.Firestore(ctx)
 	if err != nil {
 		log.Fatal("Unable to get client for database")
 	}
+
 	queueClient, err = pubsub.NewClient(ctx, "")
 	if err != nil {
 		log.Fatal("Unable to get client for queue")
