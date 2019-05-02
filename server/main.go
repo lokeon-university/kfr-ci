@@ -30,7 +30,7 @@ func setupQueueDataBase() {
 		log.Fatal("Unable to get client for database")
 	}
 
-	queueClient, err = pubsub.NewClient(ctx, "")
+	queueClient, err = pubsub.NewClient(ctx, "kfr-ci")
 	if err != nil {
 		log.Fatal("Unable to get client for queue")
 	}

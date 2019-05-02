@@ -55,7 +55,7 @@ func sendMessageQueue(payload interface{}) {
 	t := queueClient.Topic("webhooks")
 	data, _ := json.Marshal(pipeline{
 		RepositoryID: push.Repository.ID,
-		URL:          push.Repository.SSHURL,
+		URL:          push.Repository.CloneURL,
 		Branch:       strings.Split(push.Ref, "/")[2],
 		LogFileName:  push.HeadCommit.ID,
 		Language:     *push.Repository.Language,
