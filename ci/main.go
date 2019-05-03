@@ -10,22 +10,26 @@ import (
 
 const workers = 4
 
+var agnt *agent
+
 func worker(ctx context.Context, msg *pubsub.Message) {
-	// TODO call function to run docker container
+	//TODO call function to run docker container
 	msg.Ack()
 	var pipe pipeline
 	_ = json.Unmarshal(msg.Data, &pipe)
+	agnt.buildPipeline(&pipe)
 }
 
 func main() {
 	ctx := context.Background()
+	agnt = newAgent()
 	queueClient, err := pubsub.NewClient(ctx, "kfr-ci")
 	if err != nil {
 		log.Fatal("Unable to get client for queue")
 	}
 	sub := queueClient.Subscription("test")
-	sub.ReceiveSettings.NumGoroutines = 4
-	sub.ReceiveSettings.MaxOutstandingMessages = 4
+	sub.ReceiveSettings.NumGoroutines = workers
+	sub.ReceiveSettings.MaxOutstandingMessages = workers
 	cctx, cancel := context.WithCancel(ctx)
 	err = sub.Receive(cctx, worker)
 	if err != nil {
