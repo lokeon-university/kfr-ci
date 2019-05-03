@@ -1,126 +1,89 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
-	"path/filepath"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 )
 
-//LogExt log file extension
-const (
-	LogExt  = ".log"
-	Error   = "error"
-	Pending = "pending"
-	Success = "success"
-	Failure = "failure"
-)
-
-var (
-	// ciDIR is the absolute path to the CI directory
-	ciDIR = filepath.Join(os.Getenv("CI_ROOT"), "ci")
-	// LogDIR is the absolute path to the CI log directory
-	LogDIR = filepath.Join(ciDIR, "logs")
-	//availableImages list of available of supported languages
-	availableImages = map[string]string{
-		"go":     "dockerfiles/go",
-		"java":   "dockerfiles/node",
-		"c++":    "dockerfiles/c++",
-		"python": "dockerfiles/python",
-	}
-)
-
-func supportedLanguage(lang string) (ok bool) {
-	_, ok = availableImages[lang]
-	return
+var images = map[string]string{
+	"cpp":    "gcr.io/kfr-ci/kfr-cpp",
+	"go":     "gcr.io/kfr-ci/kfr-go",
+	"java":   "gcr.io/kfr-ci/kfr-java",
+	"python": "gcr.io/kfr-ci/kfr-python",
 }
 
-// Pipeline contains required information to run pipeline for a given project.
-type Pipeline struct {
-	// LogFileName name to be used for pipeline output.
-	// It should always be the commit hash.
-	LogFileName string
-	logFilePath string
-	// Repository name of pipeline project.
-	Repository string
-	// Branch name of pipeline project.
-	Branch string
-	// URL of repository
-	URL string
-	// Language of the pipeline project.
-	Language string
-	// UpdateStatus callback function to update status of pipeline.
-	UpdateStatus func(string)
+type pipeline struct {
+	RepositoryID int64  `json:"repository_id,omitempty"`
+	URL          string `json:"url,omitempty"`
+	Repository   string `json:"repository,omitempty"`
+	Branch       string `json:"branch,omitempty"`
+	LogFileName  string `json:"log_file_name,omitempty"`
+	Language     string `json:"language,omitempty"`
 }
 
-func checkError(err error, msg string) {
+type docker struct {
+}
+
+func (p *pipeline) runContainer() {
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		log.Println(msg, err)
+		panic(err)
 	}
-	return
-}
-
-func createDirFor(filePath string) error {
-	dir, file := filepath.Split(filePath)
-	log.Printf("Making dir: %s for file: %s\n", dir, file)
-	return os.MkdirAll(dir, 0755)
-}
-
-//ActivePipeline return true if pipeline is active
-func ActivePipeline(filepath string) bool {
-	cmd := exec.Command("lsof", filepath)
-	return cmd.Run() == nil
-}
-
-// TriggerPipeline it builds the absolute path to the job log file, creating necessary parent directories.
-// It terminates if a routine is currently active for the given pipeline.
-// Otherwise, sets up a new routine for the pipeline.
-func TriggerPipeline(pipe *Pipeline) {
-	pipe.logFilePath = filepath.Join(LogDIR, fmt.Sprintf("%s%s", pipe.LogFileName, LogExt))
-	err := createDirFor(pipe.logFilePath)
+	cli.NegotiateAPIVersion(ctx)
+	if !supportedLanguage(p.Language) {
+		log.Println("Language currently not supported")
+	}
+	resp, err := cli.ContainerCreate(ctx, &container.Config{
+		Image: getImage(p.Language),
+		Env:   p.loadEnvVars(),
+	}, nil, nil, "")
 	if err != nil {
-		log.Println("Couldn't create directory for job: ", err)
-		return
+		panic(err)
 	}
-	if ActivePipeline(pipe.logFilePath) {
-		log.Println("A pipeline is currently in progress: ", pipe.logFilePath)
-		return
+	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		panic(err)
 	}
-	if err := exec.Command("bash", "-c", "> ", pipe.logFilePath).Run(); err != nil {
-		log.Printf("Error: %s occurred while trying to clear logfile %s\n", err, pipe.logFilePath)
-		return
+	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	select {
+	case err := <-errCh:
+		if err != nil {
+			panic(err)
+		}
+	case <-statusCh:
 	}
-	if !supportedLanguage(pipe.Language) {
-		log.Println("Project Language is currently not supported.")
-		return
+	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+	if err != nil {
+		panic(err)
 	}
-	log.Printf("Running pipeline: %v\n", pipe)
-	go RunPipeline(pipe)
+	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
 }
 
-//RunPipeline run current pipeline
-func RunPipeline(pipe *Pipeline) {
-	logFile, err := os.OpenFile(pipe.logFilePath, os.O_RDWR|os.O_CREATE, 0755)
-	if err != nil {
-		log.Printf("Error %s occurred while opening log file: %s\n", err, pipe.logFilePath)
-		pipe.UpdateStatus(Error)
-		return
+func supportedLanguage(lang string) bool {
+	_, ok := images[lang]
+	return ok
+}
+
+func getImage(lang string) string {
+	img, _ := images[lang]
+	return img
+}
+
+func (p *pipeline) loadEnvVars() []string {
+	return []string{
+		keyValueEnv("REPO_URL", p.URL),
+		keyValueEnv("REPO_NAME", p.Repository),
+		keyValueEnv("REPO_BRANCH", p.Branch),
 	}
-	defer logFile.Close()
-	pipe.UpdateStatus(Pending)
-	image := availableImages[pipe.Language]
-	cmd := exec.Command("bash", "-c", fmt.Sprintf("%s '%s' %s", filepath.Join(ciDIR, "run.sh"), "ENV", image))
-	cmd.Stdout = logFile
-	cmd.Stderr = logFile
-	err = cmd.Run()
-	msg := "Pipeline completed successfully"
-	status := Success
-	log.Println("Exit code: ", err)
-	if err != nil {
-		msg = fmt.Sprintf("Test failed with exit code: %s", err)
-		status = Failure
-	}
-	pipe.UpdateStatus(status)
-	logFile.WriteString(fmt.Sprintf("<h4>%s</h4>", msg))
+}
+
+func keyValueEnv(key, value string) string {
+	return fmt.Sprintf("%s=%s", key, value)
 }
