@@ -10,13 +10,14 @@ var (
 )
 
 type pipeline struct {
-	RepositoryID int64        `json:"repository_id,omitempty"`
-	URL          string       `json:"url,omitempty"`
-	Repository   string       `json:"repository,omitempty"`
-	Branch       string       `json:"branch,omitempty"`
-	LogFileName  string       `json:"log_file_name,omitempty"`
-	Language     string       `json:"language,omitempty"`
-	Status       func(string) `json:"-"`
+	Branch      string                               `json:"branch,omitempty"`
+	Language    string                               `json:"language,omitempty"`
+	LogFileName string                               `json:"log_file_name,omitempty"`
+	Owner       string                               `json:"owner,omitempty"`
+	Repository  string                               `json:"repository,omitempty"`
+	TelegramID  string                               `json:"telegram_id,omitempty"`
+	URL         string                               `json:"url,omitempty"`
+	Status      func(string, string, string, string) `json:"-,omitempty"`
 }
 
 func (p *pipeline) supportedLanguage() (ok bool) {
@@ -31,12 +32,16 @@ func (p *pipeline) getImage() (image string) {
 
 func (p *pipeline) envVars() []string {
 	return []string{
-		keyValueEnv("REPO_URL", p.URL),
-		keyValueEnv("REPO_NAME", p.Repository),
 		keyValueEnv("REPO_BRANCH", p.Branch),
+		keyValueEnv("REPO_NAME", p.Repository),
+		keyValueEnv("REPO_URL", p.URL),
 	}
 }
 
 func keyValueEnv(key, value string) string {
 	return key + "=" + value
+}
+
+func (p *pipeline) status(status string) {
+	p.Status(p.TelegramID, status, p.Repository, p.Owner)
 }

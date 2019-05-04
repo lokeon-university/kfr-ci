@@ -41,7 +41,7 @@ func main() {
 	setupGitHubOAuth()
 	r := mux.NewRouter()
 	r.HandleFunc("/", HandleMain).Methods("GET")
-	r.HandleFunc("/webhooks", GitHubWebHookHandler).Methods("POST")
+	r.HandleFunc("/webhooks/{id:[0-9]+}", GitHubWebHookHandler).Methods("POST")
 	r.HandleFunc("/auth", GitHubOAuthHandler).Methods("GET")
 	srv := &http.Server{
 		Addr:         ":" + os.Getenv("PORT"),

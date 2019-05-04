@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"os"
 
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
@@ -34,7 +35,15 @@ func NewGitHubClient(ctx context.Context, token string) *GitHubClient {
 }
 
 // SetWebhook create hook on given repo
-func (gc *GitHubClient) SetWebhook(name, owner string, hook *github.Hook) (int, error) {
+func (gc *GitHubClient) SetWebhook(name, owner, ID string) (int, error) {
+	hook := &github.Hook{
+		Active: github.Bool(true),
+		Events: []string{"push"},
+		Config: map[string]interface{}{
+			"content_type": "json",
+			"url":          os.Getenv("GH_WEBHOOK") + ID,
+			"secret":       os.Getenv("GH_APPSECRET"),
+		}}
 	_, res, err := gc.client.Repositories.CreateHook(gc.ctx, owner, name, hook)
 	return res.StatusCode, err
 }

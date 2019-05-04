@@ -8,17 +8,19 @@ import (
 	"strings"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/gorilla/mux"
 	"github.com/lokeon-university/kfr-ci/utils"
 	"gopkg.in/go-playground/webhooks.v5/github"
 )
 
 type pipeline struct {
-	RepositoryID int64  `json:"repository_id,omitempty"`
-	URL          string `json:"url,omitempty"`
-	Repository   string `json:"repository,omitempty"`
-	Branch       string `json:"branch,omitempty"`
-	LogFileName  string `json:"log_file_name,omitempty"`
-	Language     string `json:"language,omitempty"`
+	Branch      string `json:"branch,omitempty"`
+	Language    string `json:"language,omitempty"`
+	LogFileName string `json:"log_file_name,omitempty"`
+	Owner       string `json:"owner,omitempty"`
+	Repository  string `json:"repository,omitempty"`
+	TelegramID  string `json:"telegram_id,omitempty"`
+	URL         string `json:"url,omitempty"`
 }
 
 //GitHubWebHookHandler handle GitHub WebHooks events.
@@ -39,7 +41,7 @@ func GitHubWebHookHandler(w http.ResponseWriter, r *http.Request) {
 	case github.PingPayload:
 		break
 	case github.PushPayload:
-		sendMessageQueue(payload)
+		sendMessageQueue(payload, mux.Vars(r))
 		break
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -47,18 +49,21 @@ func GitHubWebHookHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(res)
 }
 
-func sendMessageQueue(payload interface{}) {
+func sendMessageQueue(payload interface{}, vars map[string]string) {
 	push := payload.(github.PushPayload)
+	tgID, _ := vars["id"]
 	if push.Repository.Language == nil {
 		push.Repository.Language = utils.String("None")
 	}
 	t := queueClient.Topic("webhooks")
 	data, _ := json.Marshal(pipeline{
-		RepositoryID: push.Repository.ID,
-		URL:          push.Repository.CloneURL,
-		Branch:       strings.Split(push.Ref, "/")[2],
-		LogFileName:  push.HeadCommit.ID,
-		Language:     *push.Repository.Language,
+		Branch:      strings.Split(push.Ref, "/")[2],
+		Language:    *push.Repository.Language,
+		LogFileName: push.HeadCommit.ID,
+		Owner:       push.Repository.Owner.Login,
+		Repository:  push.Repository.Name,
+		TelegramID:  tgID,
+		URL:         push.Repository.CloneURL,
 	})
 	result := t.Publish(ctx, &pubsub.Message{
 		Data: data,

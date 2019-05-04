@@ -43,7 +43,7 @@ func newAgent() *agent {
 
 func (a *agent) buildPipeline(p *pipeline) {
 	if !p.supportedLanguage() {
-		p.Status("Language is Currently not supported")
+		p.status("Language is Currently not supported")
 		log.Printf("%s was requested\n", p.Language)
 		return
 	}
@@ -52,12 +52,12 @@ func (a *agent) buildPipeline(p *pipeline) {
 		Env:   p.envVars(),
 	}, nil, nil, "")
 	if err != nil {
-		p.Status("Failed to run container")
+		p.status("Failed to run container")
 		log.Printf("Unable to create container of %s\n", p.getImage())
 		return
 	}
 	if err := a.docker.ContainerStart(a.ctx, contr.ID, types.ContainerStartOptions{}); err != nil {
-		p.Status("Unable to run container")
+		p.status("Unable to run container")
 		log.Printf("Unable to create container of %s\n", p.getImage())
 		return
 	}
@@ -77,12 +77,16 @@ func (a *agent) buildPipeline(p *pipeline) {
 	if err != nil {
 		log.Println("failed to close writer")
 	}
+	err = a.docker.ContainerRemove(a.ctx, contr.ID, types.ContainerRemoveOptions{})
+	if err != nil {
+		log.Printf("Unable to remove container %v", contr.ID)
+	}
 }
 
 func (a *agent) savePipelineLog(p *pipeline, logfile io.ReadCloser) error {
 	wc := a.storage.Bucket("pipelines").Object(p.LogFileName).NewWriter(a.ctx)
 	if _, err := io.Copy(wc, logfile); err != nil {
-		p.Status("Unable to save log")
+		p.status("Unable to save log")
 	}
 	if err := wc.Close(); err != nil {
 		return err

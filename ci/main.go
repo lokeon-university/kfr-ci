@@ -11,18 +11,21 @@ import (
 const workers = 4
 
 var agnt *agent
+var notify *notifier
 
 func worker(ctx context.Context, msg *pubsub.Message) {
 	//TODO call function to run docker container
 	msg.Ack()
 	var pipe pipeline
 	_ = json.Unmarshal(msg.Data, &pipe)
+	pipe.Status = notify.updateStatus
 	agnt.buildPipeline(&pipe)
 }
 
 func main() {
 	ctx := context.Background()
 	agnt = newAgent()
+	notify = newNotifier()
 	queueClient, err := pubsub.NewClient(ctx, "kfr-ci")
 	if err != nil {
 		log.Fatal("Unable to get client for queue")

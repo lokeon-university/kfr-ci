@@ -2,22 +2,12 @@ package main
 
 import (
 	"net/http"
-	"os"
+	"strconv"
 	"strings"
 
-	"github.com/google/go-github/github"
 	"github.com/lokeon-university/kfr-ci/utils"
 	tb "gopkg.in/tucnak/telebot.v2"
 )
-
-var githubWebhook = github.Hook{
-	Active: github.Bool(true),
-	Events: []string{"push"},
-	Config: map[string]interface{}{
-		"content_type": "json",
-		"url":          os.Getenv("GH_WEBHOOK"),
-		"secret":       os.Getenv("GH_APPSECRET"),
-	}}
 
 func (b *bot) handleOAuth(m *tb.Message) {
 	b.bot.Send(m.Sender, "GitHub", &tb.ReplyMarkup{
@@ -53,7 +43,7 @@ func (b *bot) handleRepositories(m *tb.Message) {
 func (b *bot) handleRepositoriesResponse(c *tb.Callback) {
 	data := strings.Split(c.Data, " ")
 	gc := utils.NewGitHubClient(b.ctx, b.getUserToken(c.Sender))
-	status, err := gc.SetWebhook(data[1], data[0], &githubWebhook)
+	status, err := gc.SetWebhook(data[1], data[0], strconv.Itoa(c.Sender.ID))
 	if err != nil {
 		var msg string
 		switch status {

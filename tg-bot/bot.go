@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -20,15 +23,48 @@ type bot struct {
 	db  *firestore.Client
 }
 
-func newBot() (*bot, error) {
+type status struct {
+	Owner      string `json:"owner,omitempty"`
+	RepoName   string `json:"repo_name,omitempty"`
+	Status     string `json:"status,omitempty"`
+	TelegramID string `json:"telegram_id,omitempty"`
+}
+
+type updateStatus struct {
+	Message struct {
+		Attributes struct {
+			Key string `json:"key,omitempty"`
+		} `json:"attributes,omitempty"`
+		Data      status `json:"data,omitempty"`
+		MessageID string `json:"messageId,omitempty"`
+	} `json:"message,omitempty"`
+	Subscription string `json:"subscription,omitempty"`
+}
+
+func (u *updateStatus) UnmarshalJSON(data []byte) error {
+	type Alias updateStatus
+	aux := &struct {
+		Message struct {
+			Data string `json:"data"`
+		} `json:"message,omitempty"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	data, err := base64.StdEncoding.DecodeString(aux.Message.Data)
+	if err = json.Unmarshal(data, &u.Message.Data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func newBot(p *tb.Webhook) (*bot, error) {
 	b, err := tb.NewBot(tb.Settings{
-		Token: os.Getenv("TG_TOKEN"),
-		Poller: &tb.Webhook{
-			Listen: ":" + os.Getenv("PORT"),
-			Endpoint: &tb.WebhookEndpoint{
-				PublicURL: os.Getenv("TG_WEBHOOK"),
-			},
-		},
+		Token:  os.Getenv("TG_TOKEN"),
+		Poller: p,
 	})
 	if err != nil {
 		return nil, err
@@ -45,6 +81,7 @@ func newBot() (*bot, error) {
 }
 
 func (b *bot) start() {
+	log.Println("bot started")
 	b.bot.Start()
 }
 
@@ -92,4 +129,21 @@ func (b *bot) getRespositoriesBttns(u *tb.User, token string) [][]tb.InlineButto
 		b.bot.Handle(&inlineBtn, b.handleRepositoriesResponse)
 	}
 	return inlineKeys
+}
+
+func (b *bot) updateStatus(w http.ResponseWriter, r *http.Request) {
+	var status updateStatus
+	err := json.NewDecoder(r.Body).Decode(&status)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	id, _ := strconv.Atoi(status.Message.Data.TelegramID)
+	b.bot.Send(&tb.User{
+		ID: id,
+	}, status.Message.Data.RepoName)
+	//TODO refactor the message
+	w.Header().Set("Content-Type", "application/json")
+	res, _ := json.Marshal(map[string]string{"data": "Hello World!"})
+	w.Write(res)
 }
