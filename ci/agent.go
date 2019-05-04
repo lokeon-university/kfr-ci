@@ -14,7 +14,6 @@ import (
 type agent struct {
 	docker  *client.Client
 	storage *storage.Client
-	bucket  *storage.BucketHandle
 	ctx     context.Context
 }
 
@@ -28,15 +27,10 @@ func newAgent() *agent {
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
-	bucket := stgcli.Bucket("pipelines")
-	if err := bucket.Create(ctx, "kfr-ci", nil); err != nil {
-		log.Fatalf("Failed to create bucket: %v", err)
-	}
 	cli.NegotiateAPIVersion(ctx)
 	return &agent{
 		cli,
 		stgcli,
-		bucket,
 		ctx,
 	}
 }
@@ -84,7 +78,7 @@ func (a *agent) buildPipeline(p *pipeline) {
 }
 
 func (a *agent) savePipelineLog(p *pipeline, logfile io.ReadCloser) error {
-	wc := a.storage.Bucket("pipelines").Object(p.LogFileName).NewWriter(a.ctx)
+	wc := a.storage.Bucket("kfr-ci-pipelines").Object(p.LogFileName).NewWriter(a.ctx)
 	if _, err := io.Copy(wc, logfile); err != nil {
 		p.status("Unable to save log")
 	}

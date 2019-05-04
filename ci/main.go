@@ -36,7 +36,7 @@ func main() {
 	cctx, cancel := context.WithCancel(ctx)
 	err = sub.Receive(cctx, worker)
 	if err != nil {
-		log.Println("Unable to process more messages")
+		log.Println(err, "Unable to process more messages")
 		cancel()
 	}
 }
