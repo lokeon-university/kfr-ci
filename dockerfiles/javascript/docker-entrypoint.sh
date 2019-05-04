@@ -3,8 +3,6 @@ trap 'exit' ERR
 
 KFR_CONFIG_PRESENT="false"
 KFR_CONFIG_FILE=./.kfr.json
-REQ_PRESENT=true
-REQ_FILE=./requirements.txt
 
 
 echo "<h3>Checkout<h/3>"
@@ -22,7 +20,7 @@ else
 fi
 
 echo "<h3>Dependencies</h3>"
-pip install -v -r "$REQ_FILE"
+npm install
 echo
 echo "<h3>Build/Test</h3>"
 

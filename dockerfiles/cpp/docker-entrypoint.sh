@@ -3,11 +3,6 @@ trap 'exit' ERR
 
 echo "<h3>Starting the build</h3>"
 
-#echo "<h3>Adding SSH keys</h3>"
-#mkdir -p /root/.ssh/ && cp -R .ssh/* "$_"
-#chmod 600 /root/.ssh/* && ssh-keyscan github.com > /root/.ssh/known_hosts
-echo
-
 echo "<h3>Checkout source code<h/3>"
 git clone $REPO_URL $REPO_NAME
 cd $REPO_NAME
@@ -23,6 +18,8 @@ if [ -r $KFR_CONFIG_FILE ]; then
 fi
 
 echo "<h3>Dependencies</h3>"
+
+cat .kfr-ci.json | jq -r '. | .submodules != null'
 
 if $KFR_CONFIG_PRESENT; then
     source <(cat .kfr-ci.json | jq -r '. | .env[]')

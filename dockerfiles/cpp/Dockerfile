@@ -1,7 +1,7 @@
 FROM debian:stretch-slim
 
 RUN apt-get update && \ 
-apt-get install -y wget jq git gnupg make locales locales-all valgrind && \
+    apt-get install -y wget jq git gnupg make locales locales-all valgrind && \
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
     echo "deb http://apt.llvm.org/stretch/ llvm-toolchain-stretch-7 main" >> /etc/apt/sources.list && \
     apt-get update && \

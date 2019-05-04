@@ -1,0 +1,8 @@
+{
+    "branch": "master",
+    "steps": [
+        "pip install -r requirement.txt",
+        "python run.py"
+    ],
+    "submodules": false
+}

@@ -1,45 +1,34 @@
 #!/bin/bash
 trap 'exit' ERR
 
-source /etc/profile
+KFR_CONFIG_PRESENT="false"
+KFR_CONFIG_FILE=./.kfr.json
 
-echo "<h3>Starting the build</h3>"
-
-#echo "<h3>Adding SSH keys</h3>"
-#mkdir -p /root/.ssh/ && cp -R .ssh/* "$_"
-#chmod 600 /root/.ssh/* &&
-#    ssh-keyscan github.com >/root/.ssh/known_hosts
-#echo
-
-echo "<h3>Checkout source code<h/3>"
-git clone $REPO_URL $REPO_NAME
+echo "<h3>Checkout<h/3>"
+git clone --progress $REPO_URL $REPO_NAME
 cd $REPO_NAME
-git checkout $REPO_BRANCH
+git checkout --progress $REPO_BRANCH
+cd .
 echo
 
-# comprobamos si existe kfr.json
-KFR_CONFIG_PRESENT=false
-KFR_CONFIG_FILE=./kfr.json
-
-if [ -r ./kfr.json ]; then
-    KFR_CONFIG_PRESENT=true
+if [ -r "$KFR_CONFIG_FILE" ]; then
+    KFR_CONFIG_PRESENT="true"
+else 
+    echo "config file not found"
+    exit 2 #file $KFR_CONFIG_FILE not found
 fi
 
 echo "<h3>Dependencies</h3>"
+go get -v ./..
+echo
+echo "<h3>Build/Test</h3>"
 
-if $KFR_CONFIG_PRESENT; then
-    source <(cat .kfr-ci.json | jq -r '. | .env[]')
-fi
-
-go get -v ./...
-
-echo "<h3>Build</h3>"
-if $KFR_CONFIG_PRESENT; then
-    cat .kfr-ci.json | jq -r '. | .build[]' | bash
-fi
-
-if !($KFR_CONFIG_PRESENT); then
-    go build
+LEGHT=`cat "$KFR_CONFIG_FILE" | jq -r '. | .steps | length'`
+if [ $KFR_CONFIG_PRESENT -a "$LEGHT" -ne "0" ]; then
+    cat "$KFR_CONFIG_FILE" | jq -r '. | .steps[]' | bash
+else 
+    echo "steps cannot be empty"
+    exit 4 #steps cannot be empty
 fi
 
 exec "$@"
