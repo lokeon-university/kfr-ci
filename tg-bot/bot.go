@@ -143,10 +143,6 @@ func (b *bot) updateStatus(w http.ResponseWriter, r *http.Request) {
 		ID: id,
 	}, status.Message.Data.RepoName)
 	//TODO refactor the message
-	log.Println("the owner and repositorie name is: %s-%s",
-		status.Message.Data.Owner, status.Message.Data.RepoName)
-	log.Println("And his status is: %s", status.Message.Data.Status)
-
 	w.Header().Set("Content-Type", "application/json")
 	res, _ := json.Marshal(map[string]string{"data": "Hello World!"})
 	w.Write(res)
