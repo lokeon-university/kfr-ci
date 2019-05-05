@@ -9,7 +9,7 @@ RUN apt-get update && \
     ln -s /usr/bin/llvm-config-7 /usr/bin/llvm-config && \
     ln -s /usr/bin/clang-7 /usr/bin/clang && \
     ln -s /usr/bin/clang++-7 /usr/bin/clang++ && \
-    apt-get remove --purge -y wget gnupg 
+    apt-get remove --purge -y wget gnupg && apt-get autoremove -y
 
 COPY docker-entrypoint.sh /usr/local/bin/
 

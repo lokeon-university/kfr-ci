@@ -1,34 +1,36 @@
 #!/bin/bash
 trap 'exit' ERR
 
-echo "<h3>Starting the build</h3>"
+KFR_CONFIG_PRESENT="false"
+KFR_CONFIG_FILE=./.kfr.json
 
-echo "<h3>Checkout source code<h/3>"
-git clone $REPO_URL $REPO_NAME
-cd $REPO_NAME
-git checkout $REPO_BRANCH
+
+echo "<h3>Checkout<h/3>"
+git clone --progress "$REPO_URL" "$REPO_NAME"
+cd "$REPO_NAME" || exit
+git checkout --progress "$REPO_BRANCH"
+cd . || exit
 echo
 
-# comprobamos si existe kfr-ci.json
-KFR_CONFIG_PRESENT=false
-KFR_CONFIG_FILE=./.kfr-ci.json
-
-if [ -r $KFR_CONFIG_FILE ]; then
-    KFR_CONFIG_PRESENT=true
+if [ -r "$KFR_CONFIG_FILE" ]; then
+    KFR_CONFIG_PRESENT="true"
+else 
+    echo "config file not found"
+    exit 2 #file $KFR_CONFIG_FILE not found
 fi
 
-echo "<h3>Dependencies</h3>"
-
-cat .kfr-ci.json | jq -r '. | .submodules != null'
-
-if $KFR_CONFIG_PRESENT; then
-    source <(cat .kfr-ci.json | jq -r '. | .env[]')
+echo "<h3>Build/Test</h3>"
+SUBMODULES=$(jq -r '. | .submodules != null' "$KFR_CONFIG_FILE")
+if [ "$SUBMODULES" ]; then
+    git pull --progress --recurse-submodules
 fi
 
-echo "<h3>Build</h3>"
-
-if $KFR_CONFIG_PRESENT; then
-    cat .kfr-ci.json | jq -r '. | .build[]' | bash
+LEGHT=$(jq -r '. | .steps | length' "$KFR_CONFIG_FILE")
+if [ "$KFR_CONFIG_PRESENT" ] && [ "$LEGHT" -ne "0" ]; then
+    jq -r '. | .steps[]' "$KFR_CONFIG_FILE" | bash
+else 
+    echo "steps cannot be empty"
+    exit 4 #steps cannot be empty
 fi
 
 exec "$@"

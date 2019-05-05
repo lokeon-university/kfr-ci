@@ -4,3 +4,4 @@
 .env-dev
 .gitsecret/keys/random_seed
 test.go
+kfr-ci

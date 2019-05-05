@@ -5,10 +5,10 @@ KFR_CONFIG_PRESENT="false"
 KFR_CONFIG_FILE=./.kfr.json
 
 echo "<h3>Checkout<h/3>"
-git clone --progress $REPO_URL $REPO_NAME
-cd $REPO_NAME
-git checkout --progress $REPO_BRANCH
-cd .
+git clone --progress "$REPO_URL" "$REPO_NAME"
+cd "$REPO_NAME" || exit
+git checkout --progress "$REPO_BRANCH"
+cd . || exit
 echo
 
 if [ -r "$KFR_CONFIG_FILE" ]; then
@@ -23,9 +23,9 @@ go get -v ./..
 echo
 echo "<h3>Build/Test</h3>"
 
-LEGHT=`cat "$KFR_CONFIG_FILE" | jq -r '. | .steps | length'`
-if [ $KFR_CONFIG_PRESENT -a "$LEGHT" -ne "0" ]; then
-    cat "$KFR_CONFIG_FILE" | jq -r '. | .steps[]' | bash
+LEGHT=$(jq -r '. | .steps | length' "$KFR_CONFIG_FILE")
+if [ $KFR_CONFIG_PRESENT ] && [ "$LEGHT" -ne "0" ]; then
+    jq -r '. | .steps[]' "$KFR_CONFIG_FILE" | bash
 else 
     echo "steps cannot be empty"
     exit 4 #steps cannot be empty
