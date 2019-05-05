@@ -19,7 +19,7 @@ func (b *bot) handleOAuth(m *tb.Message) {
 }
 
 func (b *bot) handleStart(m *tb.Message) {
-	b.bot.Send(m.Sender, "Welcome to kfr-ci")
+	b.bot.Send(m.Sender, "Bienvenido al bot de KFR-CI. \n Escriba /help para ver los comandos disponibles.")
 }
 
 func (b *bot) handleHelp(m *tb.Message) {
@@ -31,11 +31,11 @@ func (b *bot) handleHelp(m *tb.Message) {
 func (b *bot) handleRepositories(m *tb.Message) {
 	token := b.getUserToken(m.Sender)
 	if token == "" {
-		b.bot.Send(m.Sender, "Please call /help")
+		b.bot.Send(m.Sender, "Por favor, escriba /help")
 		return
 	}
 	inlineKeys := b.getRespositoriesBttns(m.Sender, token)
-	b.bot.Send(m.Sender, "Choose Repositorie:", &tb.ReplyMarkup{
+	b.bot.Send(m.Sender, "Seleccione repositorios:", &tb.ReplyMarkup{
 		InlineKeyboard: inlineKeys,
 	})
 }
@@ -48,13 +48,13 @@ func (b *bot) handleRepositoriesResponse(c *tb.Callback) {
 		var msg string
 		switch status {
 		case http.StatusNotFound:
-			msg = "The repositorie was not Found"
+			msg = "No se ha encontrado el repositorio"
 			break
 		case http.StatusUnprocessableEntity:
-			msg = "The repositorie was already registered"
+			msg = "El repositorio ya estaba registrado"
 			break
 		default:
-			msg = "Unable to set WebHook"
+			msg = "Fallo al configurar WebHook"
 			break
 		}
 		b.bot.Respond(c, &tb.CallbackResponse{
@@ -65,6 +65,6 @@ func (b *bot) handleRepositoriesResponse(c *tb.Callback) {
 	}
 	b.bot.Respond(c, &tb.CallbackResponse{
 		ShowAlert: true,
-		Text:      "WebHook created sucessfully",
+		Text:      "WebHook creado con éxito",
 	})
 }
