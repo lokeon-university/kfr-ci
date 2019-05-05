@@ -2,3 +2,4 @@
 .ckfr-ci.json
 .inlinenv
 .env-dev
+.gitsecret/keys/random_seed

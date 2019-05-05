@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
 	"net/url"
 	"os"
 
@@ -17,4 +20,11 @@ func generateOAuthURL(m *tb.Message) string {
 	params.Add("state", fmt.Sprintf("%d", m.Sender.ID))
 	baseURL.RawQuery = params.Encode()
 	return baseURL.String()
+}
+
+func statusOK(w http.ResponseWriter, r *http.Request) {
+	log.Println("readed")
+	w.Header().Set("Content-Type", "application/json")
+	res, _ := json.Marshal(map[string]string{"status": "OK"})
+	w.Write(res)
 }

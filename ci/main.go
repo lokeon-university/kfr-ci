@@ -30,7 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Unable to get client for queue")
 	}
-	sub := queueClient.Subscription("test")
+	sub := queueClient.Subscription("webhooks")
 	sub.ReceiveSettings.NumGoroutines = workers
 	sub.ReceiveSettings.MaxOutstandingMessages = workers
 	cctx, cancel := context.WithCancel(ctx)

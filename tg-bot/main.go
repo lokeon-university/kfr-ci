@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -13,7 +12,6 @@ import (
 
 func main() {
 	p := &tb.Webhook{
-		//Listen: ":" + os.Getenv("PORT"),
 		Endpoint: &tb.WebhookEndpoint{
 			PublicURL: os.Getenv("TG_WEBHOOK"),
 		},
@@ -28,11 +26,11 @@ func main() {
 	b.newHandler("/repos", b.handleRepositories)
 	go b.start()
 	r := mux.NewRouter()
-	r.HandleFunc("/", HandleMain).Methods("GET")
-	r.HandleFunc("/status", b.updateStatus).Methods("POST")
-	r.HandleFunc("/tg", p.ServeHTTP).Methods("POST")
+	r.HandleFunc("/", statusOK).Methods("GET")
+	r.HandleFunc("/notifications", b.updateStatus).Methods("POST")
+	r.HandleFunc("/telegram", p.ServeHTTP).Methods("POST")
 	srv := &http.Server{
-		Addr:         "127.0.0.1:" + os.Getenv("PORT"),
+		Addr:         ":" + os.Getenv("PORT"),
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
 		IdleTimeout:  time.Second * 60,
@@ -42,12 +40,4 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil {
 		log.Println(err)
 	}
-}
-
-//HandleMain func for testind propourse
-func HandleMain(w http.ResponseWriter, r *http.Request) {
-	log.Println("readed")
-	w.Header().Set("Content-Type", "application/json")
-	res, _ := json.Marshal(map[string]string{"data": "Hello World!"})
-	w.Write(res)
 }
