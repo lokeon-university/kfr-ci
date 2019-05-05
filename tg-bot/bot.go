@@ -32,7 +32,7 @@ type status struct {
 }
 
 func (s *status) getMessage() string {
-	return emoji.Sprintf("%s/%s\nEstado del Pipeline:\n%s", s.Owner, s.RepoName, s.Status)
+	return emoji.Sprintf("%s/%s\nPipeline Status:\n%s", s.Owner, s.RepoName, s.Status)
 }
 
 type updateStatus struct {
@@ -86,7 +86,7 @@ func newBot(p *tb.Webhook) (*bot, error) {
 }
 
 func (b *bot) start() {
-	log.Println("Bienvenido al BOT KFR-CI, para ver la lista de comandos, escriba /help")
+	log.Println("bot started")
 	b.bot.Start()
 }
 
@@ -109,7 +109,7 @@ func (b *bot) getUserToken(u *tb.User) string {
 			break
 		}
 		if err != nil {
-			log.Fatalf("Fallo al iterar: %v", err)
+			log.Fatalf("Failed to iterate: %v", err)
 		}
 		doc.DataTo(&user)
 	}
@@ -121,7 +121,7 @@ func (b *bot) getRespositoriesBttns(u *tb.User, token string) [][]tb.InlineButto
 	gc := utils.NewGitHubClient(b.ctx, token)
 	repos, err := gc.GetRespositories()
 	if err != nil {
-		b.bot.Send(u, "Fallo al obtener tus repositorios")
+		b.bot.Send(u, "Unable to get your repositories")
 		return inlineKeys
 	}
 	for _, repo := range repos {
