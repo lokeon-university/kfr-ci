@@ -53,12 +53,12 @@ func sendMessageQueue(payload interface{}, vars map[string]string) {
 	push := payload.(github.PushPayload)
 	tgID, _ := vars["id"]
 	if push.Repository.Language == nil {
-		push.Repository.Language = utils.String("None")
+		push.Repository.Language = utils.String("none")
 	}
 	t := queueClient.Topic("webhooks")
 	data, _ := json.Marshal(pipeline{
 		Branch:      strings.Split(push.Ref, "/")[2],
-		Language:    *push.Repository.Language,
+		Language:    strings.ToLower(*push.Repository.Language),
 		LogFileName: push.HeadCommit.ID,
 		Owner:       push.Repository.Owner.Login,
 		Repository:  push.Repository.Name,

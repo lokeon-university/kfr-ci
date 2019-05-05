@@ -14,7 +14,6 @@ var agnt *agent
 var notify *notifier
 
 func worker(ctx context.Context, msg *pubsub.Message) {
-	//TODO call function to run docker container
 	msg.Ack()
 	var pipe pipeline
 	_ = json.Unmarshal(msg.Data, &pipe)

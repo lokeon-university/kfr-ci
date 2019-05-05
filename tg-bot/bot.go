@@ -12,6 +12,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
+	"github.com/kyokomi/emoji"
 	"github.com/lokeon-university/kfr-ci/utils"
 	"google.golang.org/api/iterator"
 	tb "gopkg.in/tucnak/telebot.v2"
@@ -28,6 +29,10 @@ type status struct {
 	RepoName   string `json:"repo_name,omitempty"`
 	Status     string `json:"status,omitempty"`
 	TelegramID string `json:"telegram_id,omitempty"`
+}
+
+func (s *status) getMessage() string {
+	return emoji.Sprintf("%s/%s\nPipeline Status:\n%s", s.Owner, s.RepoName, s.Status)
 }
 
 type updateStatus struct {
@@ -141,9 +146,8 @@ func (b *bot) updateStatus(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(status.Message.Data.TelegramID)
 	b.bot.Send(&tb.User{
 		ID: id,
-	}, status.Message.Data.RepoName)
-	//TODO refactor the message
+	}, status.Message.Data.getMessage())
 	w.Header().Set("Content-Type", "application/json")
-	res, _ := json.Marshal(map[string]string{"data": "Hello World!"})
+	res, _ := json.Marshal(map[string]string{"status": "OK"})
 	w.Write(res)
 }

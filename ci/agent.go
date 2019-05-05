@@ -37,7 +37,7 @@ func newAgent() *agent {
 
 func (a *agent) buildPipeline(p *pipeline) {
 	if !p.supportedLanguage() {
-		p.status("Language is Currently not supported")
+		p.status(":earth_americas: Language is currently not supported.")
 		log.Printf("%s was requested\n", p.Language)
 		return
 	}
@@ -46,41 +46,53 @@ func (a *agent) buildPipeline(p *pipeline) {
 		Env:   p.envVars(),
 	}, nil, nil, "")
 	if err != nil {
-		p.status("Failed to run container")
+		p.status(":construction: Failed to create pipeline.")
 		log.Printf("Unable to create container of %s\n", p.getImage())
 		return
 	}
 	if err := a.docker.ContainerStart(a.ctx, contr.ID, types.ContainerStartOptions{}); err != nil {
-		p.status("Unable to run container")
+		p.status(":rotating_light: Failed to build pipeline")
 		log.Printf("Unable to create container of %s\n", p.getImage())
 		return
 	}
+	p.status("Building pipeline.")
+	correct := true
 	statusCh, errCh := a.docker.ContainerWait(a.ctx, contr.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
 		if err != nil {
+			log.Println(err)
 			panic(err)
 		}
-	case <-statusCh:
+	case sts := <-statusCh:
+		log.Println(sts)
 	}
 	logfile, err := a.docker.ContainerLogs(a.ctx, contr.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
 	if err != nil {
-		log.Println("Failed get log File")
+		correct = false
+		log.Printf("Failed get log file: %v, %v", contr.ID, p.LogFileName)
 	}
 	err = a.savePipelineLog(p, logfile)
 	if err != nil {
-		log.Println("failed to close writer")
+		correct = false
+		log.Printf("Failed to close writer: %v, %v", contr.ID, p.LogFileName)
 	}
 	err = a.docker.ContainerRemove(a.ctx, contr.ID, types.ContainerRemoveOptions{})
 	if err != nil {
-		log.Printf("Unable to remove container %v", contr.ID)
+		correct = false
+		log.Printf("Unable to remove container %v\n", contr.ID)
+	}
+	if correct {
+		p.status(":tada: pipeline finished.")
+	} else {
+		p.status(":bomb: pipeline finished with errors.")
 	}
 }
 
 func (a *agent) savePipelineLog(p *pipeline, logfile io.ReadCloser) error {
-	wc := a.storage.Bucket("kfr-ci-pipelines").Object(p.LogFileName).NewWriter(a.ctx)
+	wc := a.storage.Bucket("kfr-ci-pipelines").Object(p.getLogFileName()).NewWriter(a.ctx)
 	if _, err := io.Copy(wc, logfile); err != nil {
-		p.status("Unable to save log")
+		p.status(":page_with_curl: Failed saving log")
 	}
 	if err := wc.Close(); err != nil {
 		return err
