@@ -53,5 +53,5 @@ func (p *pipeline) status(status string) {
 }
 
 func (p *pipeline) getLogFileName() string {
-	return fmt.Sprintf("%s/%s/%s/%s-%s.txt", p.Owner, p.Repository, p.Branch, p.LogFileName, time.Now().Format(time.RFC3339))
+	return fmt.Sprintf("%s/%s/%s/%s-%s.log", p.Owner, p.Repository, p.Branch, p.LogFileName, time.Now().Format(time.RFC3339))
 }

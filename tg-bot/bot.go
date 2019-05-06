@@ -34,7 +34,7 @@ type status struct {
 }
 
 func (s *status) getLogURL() string {
-	return fmt.Sprintf("https://kfr-ci.tk/logs/%s/%s/%s/%s", s.Owner, s.RepoName, s.Branch, s.Status)
+	return fmt.Sprintf("https://kfr-ci.tk/logs/%s", s.Status)
 }
 
 func (s *status) getMessage() (interface{}, bool) {
@@ -161,9 +161,9 @@ func (b *bot) updateStatus(w http.ResponseWriter, r *http.Request) {
 	msg, hasLog := status.Message.Data.getMessage()
 	user := &tb.User{ID: id}
 	if hasLog {
-		b.bot.Send(user, msg)
+		b.bot.Send(user, "If you want to see the log file.", msg)
 	} else {
-		b.bot.Send(user, "If you can see log files.", msg)
+		b.bot.Send(user, msg)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	res, _ := json.Marshal(map[string]string{"status": "OK"})

@@ -37,8 +37,8 @@ push-images() {
 }
 
 all() {
-	#build-services
-	#build-images
+	build-services
+	build-images
 	push-images
 	deploy-services
 	build-ci
