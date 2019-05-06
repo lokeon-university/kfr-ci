@@ -32,7 +32,7 @@ func GitHubWebHookHandler(w http.ResponseWriter, r *http.Request) {
 	payload, err := hook.Parse(r, github.PushEvent, github.PingEvent)
 	if err != nil {
 		if err == github.ErrEventNotFound {
-			log.Println("event wasn't one of the ones asked to be parsed")
+			log.Println("Event wasn't one of the ones asked to be parsed")
 		} else {
 			log.Println(err)
 		}

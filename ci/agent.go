@@ -55,7 +55,7 @@ func (a *agent) buildPipeline(p *pipeline) {
 		log.Printf("Unable to create container of %s\n", p.getImage())
 		return
 	}
-	p.status("Building pipeline.")
+	p.status(":tools: Building Pipeline :tools:")
 	correct := true
 	statusCh, errCh := a.docker.ContainerWait(a.ctx, contr.ID, container.WaitConditionNotRunning)
 	select {
@@ -65,37 +65,47 @@ func (a *agent) buildPipeline(p *pipeline) {
 			panic(err)
 		}
 	case sts := <-statusCh:
-		log.Println(sts)
+		switch sts.StatusCode {
+		case int64(2):
+			p.status(":x: File .kfr-ci.json not found")
+			break
+		case int64(4):
+			p.status(":x: key stepts cannot be empty")
+			break
+		case int64(0):
+			p.status(":tada: pipeline finished.")
+			break
+		}
 	}
 	logfile, err := a.docker.ContainerLogs(a.ctx, contr.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
 	if err != nil {
 		correct = false
 		log.Printf("Failed get log file: %v, %v", contr.ID, p.LogFileName)
 	}
-	err = a.savePipelineLog(p, logfile)
+	file, err := a.savePipelineLog(p, logfile)
 	if err != nil {
 		correct = false
 		log.Printf("Failed to close writer: %v, %v", contr.ID, p.LogFileName)
 	}
 	err = a.docker.ContainerRemove(a.ctx, contr.ID, types.ContainerRemoveOptions{})
 	if err != nil {
-		correct = false
 		log.Printf("Unable to remove container %v\n", contr.ID)
 	}
 	if correct {
-		p.status(":tada: pipeline finished.")
+		p.status(file)
 	} else {
-		p.status(":bomb: pipeline finished with errors.")
+		p.status(":bomb: failed to create logs please retry.")
 	}
 }
 
-func (a *agent) savePipelineLog(p *pipeline, logfile io.ReadCloser) error {
-	wc := a.storage.Bucket("kfr-ci-pipelines").Object(p.getLogFileName()).NewWriter(a.ctx)
+func (a *agent) savePipelineLog(p *pipeline, logfile io.ReadCloser) (string, error) {
+	file := p.getLogFileName()
+	wc := a.storage.Bucket("kfr-ci-pipelines").Object(file).NewWriter(a.ctx)
 	if _, err := io.Copy(wc, logfile); err != nil {
 		p.status(":page_with_curl: Failed saving log")
 	}
 	if err := wc.Close(); err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return file, nil
 }

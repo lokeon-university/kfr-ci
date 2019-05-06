@@ -16,14 +16,14 @@ var (
 )
 
 type pipeline struct {
-	Branch      string                               `json:"branch,omitempty"`
-	Language    string                               `json:"language,omitempty"`
-	LogFileName string                               `json:"log_file_name,omitempty"`
-	Owner       string                               `json:"owner,omitempty"`
-	Repository  string                               `json:"repository,omitempty"`
-	TelegramID  string                               `json:"telegram_id,omitempty"`
-	URL         string                               `json:"url,omitempty"`
-	Status      func(string, string, string, string) `json:"-,omitempty"`
+	Branch      string                                       `json:"branch,omitempty"`
+	Language    string                                       `json:"language,omitempty"`
+	LogFileName string                                       `json:"log_file_name,omitempty"`
+	Owner       string                                       `json:"owner,omitempty"`
+	Repository  string                                       `json:"repository,omitempty"`
+	TelegramID  string                                       `json:"telegram_id,omitempty"`
+	URL         string                                       `json:"url,omitempty"`
+	Status      func(string, string, string, string, string) `json:"-,omitempty"`
 }
 
 func (p *pipeline) supportedLanguage() (ok bool) {
@@ -49,9 +49,9 @@ func keyValueEnv(key, value string) string {
 }
 
 func (p *pipeline) status(status string) {
-	p.Status(p.TelegramID, status, p.Repository, p.Owner)
+	p.Status(p.TelegramID, status, p.Repository, p.Owner, p.Branch)
 }
 
 func (p *pipeline) getLogFileName() string {
-	return fmt.Sprintf("%s/%s/%s/%s-%s.log", p.Owner, p.Repository, p.Branch, p.LogFileName, time.Now().Format(time.RFC3339))
+	return fmt.Sprintf("%s/%s/%s/%s-%s.txt", p.Owner, p.Repository, p.Branch, p.LogFileName, time.Now().Format(time.RFC3339))
 }

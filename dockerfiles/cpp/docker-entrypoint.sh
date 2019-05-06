@@ -10,7 +10,7 @@ git clone --progress "$REPO_URL" "$REPO_NAME"
 cd "$REPO_NAME" || exit
 git checkout --progress "$REPO_BRANCH"
 cd . || exit
-echo
+echo ""
 
 if [ -r "$KFR_CONFIG_FILE" ]; then
     KFR_CONFIG_PRESENT="true"

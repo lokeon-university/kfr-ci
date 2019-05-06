@@ -40,9 +40,8 @@ func GitHubOAuthHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "https://t.me/kfr_cibot", 302)
 }
 
-//HandleMain func for testind propourse
-func HandleMain(w http.ResponseWriter, r *http.Request) {
+func statusOK(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	res, _ := json.Marshal(map[string]string{"data": "Hello World!"})
+	res, _ := json.Marshal(map[string]string{"status": "OK"})
 	w.Write(res)
 }

@@ -13,6 +13,7 @@ type notifier struct {
 }
 
 type status struct {
+	Branch     string `json:"branch,omitempty"`
 	Owner      string `json:"owner,omitempty"`
 	RepoName   string `json:"repo_name,omitempty"`
 	Status     string `json:"status,omitempty"`
@@ -28,11 +29,12 @@ func newNotifier() *notifier {
 	return &notifier{cli}
 }
 
-func (s *notifier) updateStatus(tgID, sts, repoName, Owner string) {
+func (s *notifier) updateStatus(tgID, sts, repoName, owner, branch string) {
 	ctx := context.Background()
 	t := s.cli.Topic("status")
 	data, _ := json.Marshal(status{
-		Owner:      Owner,
+		Branch:     branch,
+		Owner:      owner,
 		RepoName:   repoName,
 		Status:     sts,
 		TelegramID: tgID,

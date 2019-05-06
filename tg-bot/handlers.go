@@ -12,30 +12,31 @@ import (
 func (b *bot) handleOAuth(m *tb.Message) {
 	b.bot.Send(m.Sender, "GitHub", &tb.ReplyMarkup{
 		InlineKeyboard: [][]tb.InlineButton{{{
-			Text: "Confirm Oauth",
+			Text: "Please, give us permission to see your repositories on GitHub",
 			URL:  generateOAuthURL(m),
 		}}},
 	})
 }
 
 func (b *bot) handleStart(m *tb.Message) {
-	b.bot.Send(m.Sender, "Welcome to kfr-ci")
+	b.bot.Send(m.Sender, "Welcome to the KFR-CI bot. \n Type /help to see the available commands.")
 }
 
 func (b *bot) handleHelp(m *tb.Message) {
-	help := `/repos -> Devuelve una lista con los repositorios de una cuenta previamente registrada.
-	/auth -> Registra a un usuario mediante su cuenta de Github.`
+	help := `/repos -> Returns a list with the repositories of a previously registered account.
+	/auth -> Register a user through your GitHub account.
+	/help -> This command.`
 	b.bot.Send(m.Sender, help)
 }
 
 func (b *bot) handleRepositories(m *tb.Message) {
 	token := b.getUserToken(m.Sender)
 	if token == "" {
-		b.bot.Send(m.Sender, "Please call /help")
+		b.bot.Send(m.Sender, "Please, try /auth")
 		return
 	}
 	inlineKeys := b.getRespositoriesBttns(m.Sender, token)
-	b.bot.Send(m.Sender, "Choose Repositorie:", &tb.ReplyMarkup{
+	b.bot.Send(m.Sender, "Choose a Repository:", &tb.ReplyMarkup{
 		InlineKeyboard: inlineKeys,
 	})
 }
@@ -48,13 +49,13 @@ func (b *bot) handleRepositoriesResponse(c *tb.Callback) {
 		var msg string
 		switch status {
 		case http.StatusNotFound:
-			msg = "The repositorie was not Found"
+			msg = "Repository cannot be found."
 			break
 		case http.StatusUnprocessableEntity:
-			msg = "The repositorie was already registered"
+			msg = "The repository was already registered."
 			break
 		default:
-			msg = "Unable to set WebHook"
+			msg = "Failed to set Webhook."
 			break
 		}
 		b.bot.Respond(c, &tb.CallbackResponse{
@@ -65,6 +66,6 @@ func (b *bot) handleRepositoriesResponse(c *tb.Callback) {
 	}
 	b.bot.Respond(c, &tb.CallbackResponse{
 		ShowAlert: true,
-		Text:      "WebHook created sucessfully",
+		Text:      "WebHook created sucesfully",
 	})
 }

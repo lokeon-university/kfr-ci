@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -25,14 +26,27 @@ type bot struct {
 }
 
 type status struct {
+	Branch     string `json:"branch,omitempty"`
 	Owner      string `json:"owner,omitempty"`
 	RepoName   string `json:"repo_name,omitempty"`
 	Status     string `json:"status,omitempty"`
 	TelegramID string `json:"telegram_id,omitempty"`
 }
 
-func (s *status) getMessage() string {
-	return emoji.Sprintf("%s/%s\nPipeline Status:\n%s", s.Owner, s.RepoName, s.Status)
+func (s *status) getLogURL() string {
+	return fmt.Sprintf("https://kfr-ci.tk/logs/%s/%s/%s/%s", s.Owner, s.RepoName, s.Branch, s.Status)
+}
+
+func (s *status) getMessage() (interface{}, bool) {
+	if strings.HasSuffix(s.Status, ".log") {
+		return &tb.ReplyMarkup{
+			InlineKeyboard: [][]tb.InlineButton{{{
+				Text: "Click here.",
+				URL:  s.getLogURL(),
+			}}},
+		}, true
+	}
+	return emoji.Sprintf("Pipeline Status:\n%s/%s %s branch\n%s", s.Owner, s.RepoName, s.Branch, s.Status), false
 }
 
 type updateStatus struct {
@@ -144,9 +158,13 @@ func (b *bot) updateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := strconv.Atoi(status.Message.Data.TelegramID)
-	b.bot.Send(&tb.User{
-		ID: id,
-	}, status.Message.Data.getMessage())
+	msg, hasLog := status.Message.Data.getMessage()
+	user := &tb.User{ID: id}
+	if hasLog {
+		b.bot.Send(user, msg)
+	} else {
+		b.bot.Send(user, "If you can see log files.", msg)
+	}
 	w.Header().Set("Content-Type", "application/json")
 	res, _ := json.Marshal(map[string]string{"status": "OK"})
 	w.Write(res)

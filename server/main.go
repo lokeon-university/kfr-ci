@@ -40,7 +40,7 @@ func main() {
 	setupQueueDataBase()
 	setupGitHubOAuth()
 	r := mux.NewRouter()
-	r.HandleFunc("/", HandleMain).Methods("GET")
+	r.HandleFunc("/", statusOK).Methods("GET")
 	r.HandleFunc("/webhooks/{id:[0-9]+}", GitHubWebHookHandler).Methods("POST")
 	r.HandleFunc("/auth", GitHubOAuthHandler).Methods("GET")
 	srv := &http.Server{

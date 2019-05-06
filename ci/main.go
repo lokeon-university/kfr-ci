@@ -27,7 +27,7 @@ func main() {
 	notify = newNotifier()
 	queueClient, err := pubsub.NewClient(ctx, "kfr-ci")
 	if err != nil {
-		log.Fatal("Unable to get client for queue")
+		log.Fatal("Unable to get queue client")
 	}
 	sub := queueClient.Subscription("webhooks")
 	sub.ReceiveSettings.NumGoroutines = workers
