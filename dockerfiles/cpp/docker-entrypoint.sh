@@ -3,9 +3,10 @@ trap 'exit' ERR
 
 KFR_CONFIG_PRESENT="false"
 KFR_CONFIG_FILE=./.kfr.json
+GREEN='\033[0;32m'
+NC='\033[0m'
 
-
-echo "<h3>Checkout<h/3>"
+echo -e "${GREEN}Checkout${NC}"
 git clone --progress "$REPO_URL" "$REPO_NAME"
 cd "$REPO_NAME" || exit
 git checkout --progress "$REPO_BRANCH"
@@ -19,7 +20,7 @@ else
     exit 2 #file $KFR_CONFIG_FILE not found
 fi
 
-echo "<h3>Build/Test</h3>"
+echo -e "${GREEN}Build/Test${NC}"
 SUBMODULES=$(jq -r '. | .submodules != null' "$KFR_CONFIG_FILE")
 if [ "$SUBMODULES" ]; then
     git pull --progress --recurse-submodules

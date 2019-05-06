@@ -75,6 +75,9 @@ func (a *agent) buildPipeline(p *pipeline) {
 		case int64(0):
 			p.status(":tada: pipeline finished.")
 			break
+		default:
+			p.status(":bomb: pipeline failed with undefined code please retry.")
+			break
 		}
 	}
 	logfile, err := a.docker.ContainerLogs(a.ctx, contr.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
